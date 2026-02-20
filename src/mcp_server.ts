@@ -2,21 +2,10 @@ import "dotenv/config";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
+import { basename } from "path";
 import { pdfOcr } from "./utils_pdf.js";
 import { arxivMarkdown, arxivTitle } from "./utils_arxiv.js";
-import { resolve, basename } from "path";
-import { mkdirSync, writeFileSync } from "fs";
-
-const MARKDOWN_DIR = resolve(process.env.MARKDOWN_DIR || ".assets/markdown");
-
-function sanitizeName(name: string): string {
-  return name
-    .replace(/\.pdf$/i, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "_")
-    .replace(/_+/g, "_")
-    .replace(/^_|_$/g, "");
-}
+import { markdownFilename, markdownSave } from "./utils_markdown.js";
 
 const server = new McpServer({
   name: "prometheus",
@@ -32,9 +21,11 @@ server.tool(
   { pdf_path: z.string().describe("Absolute or relative path to the PDF file") },
   async ({ pdf_path }) => {
     try {
-      const md = await pdfOcr({ path: pdf_path });
+      const content = await pdfOcr({ path: pdf_path });
+      const filename = markdownFilename(basename(pdf_path));
+      const mdPath = markdownSave(content, filename);
       return {
-        content: [{ type: "text" as const, text: md }],
+        content: [{ type: "text" as const, text: mdPath }],
       };
     } catch (e: any) {
       return {
@@ -56,13 +47,11 @@ server.tool(
   async (args) => {
     try {
       const title = await arxivTitle(args);
-      const markdown = await arxivMarkdown(args);
-      mkdirSync(MARKDOWN_DIR, { recursive: true });
-      const mdName = sanitizeName(title) + ".md";
-      const mdPath = resolve(MARKDOWN_DIR, mdName);
-      writeFileSync(mdPath, markdown, "utf-8");
+      const content = await arxivMarkdown(args);
+      const filename = markdownFilename(title);
+      const mdPath = markdownSave(content, filename);
       return {
-        content: [{ type: "text" as const, text: markdown }],
+        content: [{ type: "text" as const, text: mdPath }],
       };
     } catch (e: any) {
       return {
