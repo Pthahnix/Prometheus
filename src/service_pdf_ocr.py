@@ -80,15 +80,15 @@ def pdf_ocr(pdf_bytes: bytes, pdf_name: str = "input.pdf") -> str:
     _write_config(MODEL_NAME)
     sys.path.insert(0, REPO_DIR)
 
-    import fitz
+    import fitz # type: ignore
     from PIL import Image
     from concurrent.futures import ThreadPoolExecutor
-    from vllm import LLM, SamplingParams
-    from vllm.model_executor.models.registry import ModelRegistry
-    from deepseek_ocr2 import DeepseekOCR2ForCausalLM
-    from process.ngram_norepeat import NoRepeatNGramLogitsProcessor
-    from process.image_process import DeepseekOCR2Processor
-    from config import CROP_MODE
+    from vllm import LLM, SamplingParams # type: ignore
+    from vllm.model_executor.models.registry import ModelRegistry # type: ignore
+    from deepseek_ocr2 import DeepseekOCR2ForCausalLM # type: ignore
+    from process.ngram_norepeat import NoRepeatNGramLogitsProcessor # type: ignore
+    from process.image_process import DeepseekOCR2Processor # type: ignore
+    from config import CROP_MODE # type: ignore
 
     ModelRegistry.register_model(
         "DeepseekOCR2ForCausalLM", DeepseekOCR2ForCausalLM

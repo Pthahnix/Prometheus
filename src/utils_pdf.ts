@@ -55,7 +55,6 @@ export async function pdfOcr({ path }: { path: string }): Promise<string> {
     "--output", mdPath,
   ], projectRoot);
 
-  const md = readFileSync(mdPath, "utf-8");
-  console.log(`[utils_pdf] Saved: ${mdPath} (${md.length} chars)`);
-  return md;
+  console.log(`[utils_pdf] Saved: ${mdPath}`);
+  return mdPath;
 }
