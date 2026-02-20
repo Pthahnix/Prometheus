@@ -43,9 +43,10 @@ The `.mcp.json` config is included — Claude Code will auto-discover `pdf2markd
 ```bash
 src/
 ├── service_pdf_ocr.py   # Modal GPU service (DeepSeek-OCR2 + vLLM)
-├── utils_pdf.ts         # TS utility — calls Modal, saves to MARKDOWN_DIR
-├── utils_arxiv.ts       # TS utility — arXiv API + arxiv2md.org
-└── mcp_server.ts        # MCP server — exposes tools to Claude Code
+├── utils_pdf.ts         # TS utility — calls Modal, returns content string
+├── utils_arxiv.ts       # TS utility — arXiv API + arxiv2md.org, returns content string
+├── utils_markdown.ts    # Shared — filename sanitization + save to MARKDOWN_DIR
+└── mcp_server.ts        # MCP server — orchestrates utils, exposes tools
 ```
 
 Local TS orchestration → remote compute (Modal GPU / arxiv2md API). Scale-to-zero, pay only for what you use.
