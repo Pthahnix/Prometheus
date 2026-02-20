@@ -55,7 +55,7 @@ Local TS orchestration → remote compute (Modal GPU / arxiv2md API). Scale-to-z
 
 | Tool | Input | Output |
 | ---- | ----- | ------ |
-| `pdf2markdown` | PDF file path | Markdown file in `MARKDOWN_DIR` |
+| `pdf2markdown` | PDF file path | Markdown file in `MARKDOWN_DIR` (with progress notifications) |
 | `arxiv2markdown` | arXiv ID, URL, or title | Markdown file in `MARKDOWN_DIR` |
 
 ## Requirements

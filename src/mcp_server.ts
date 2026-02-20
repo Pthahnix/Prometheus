@@ -19,9 +19,27 @@ server.tool(
   "Convert a PDF file to markdown via DeepSeek-OCR2 on Modal GPU. " +
   "Cold-start ~3min, then ~1min/page. Returns markdown text.",
   { pdf_path: z.string().describe("Absolute or relative path to the PDF file") },
-  async ({ pdf_path }) => {
+  async ({ pdf_path }, extra: any) => {
     try {
-      const content = await pdfOcr({ path: pdf_path });
+      const progressToken = extra?._meta?.progressToken;
+
+      const content = await pdfOcr({
+        path: pdf_path,
+        onProgress: async ({ message, current, total }) => {
+          // Structured progress notification
+          if (progressToken !== undefined && current !== undefined && total !== undefined) {
+            await extra.sendNotification({
+              method: "notifications/progress",
+              params: { progressToken, progress: current, total, message },
+            });
+          }
+          // Logging message (always available)
+          try {
+            await server.sendLoggingMessage({ level: "info", data: message });
+          } catch {}
+        },
+      });
+
       const filename = markdownFilename(basename(pdf_path));
       const mdPath = markdownSave(content, filename);
       return {
@@ -59,6 +77,47 @@ server.tool(
         content: [{ type: "text" as const, text: `arxiv2markdown failed: ${e.message}` }],
       };
     }
+  }
+);
+
+// --- Experimental: progress test tool ---------------------------------
+
+server.tool(
+  "progress_test",
+  "Test tool to verify MCP progress notifications. Simulates a 5-step task.",
+  { input: z.string().optional().describe("Optional input, ignored") },
+  async (_args: any, extra: any) => {
+    const progressToken = extra?._meta?.progressToken;
+    const log: string[] = [];
+    log.push(`progressToken: ${progressToken ?? "NOT PROVIDED"}`);
+
+    for (let i = 1; i <= 5; i++) {
+      await new Promise(r => setTimeout(r, 1000));
+
+      // Approach 1: structured progress notification
+      if (progressToken !== undefined) {
+        await extra.sendNotification({
+          method: "notifications/progress",
+          params: { progressToken, progress: i, total: 5, message: `Step ${i}/5` },
+        });
+        log.push(`[progress] sent ${i}/5`);
+      }
+
+      // Approach 2: logging message
+      try {
+        await server.sendLoggingMessage({
+          level: "info",
+          data: `Progress: step ${i}/5 (${i * 20}%)`,
+        });
+        log.push(`[logging] sent step ${i}/5`);
+      } catch (e: any) {
+        log.push(`[logging] failed: ${e.message}`);
+      }
+    }
+
+    return {
+      content: [{ type: "text" as const, text: log.join("\n") }],
+    };
   }
 );
 
