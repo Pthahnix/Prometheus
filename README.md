@@ -24,13 +24,19 @@ modal run src/service_pdf_ocr.py --pdf-path path/to/file.pdf --output output.md
 npx tsx -e "import {pdfOcr} from './src/utils_pdf.js'; await pdfOcr({path: 'path/to/file.pdf'})"
 ```
 
+### Fetch an arXiv paper
+
+```bash
+npx tsx -e "import {arxivMarkdown} from './src/utils_arxiv.js'; console.log(await arxivMarkdown({id: '2205.14135'}))"
+```
+
 ### MCP Server (Claude Code integration)
 
 ```bash
 npm run mcp
 ```
 
-The `.mcp.json` config is included — Claude Code will auto-discover the `pdf_ocr` tool.
+The `.mcp.json` config is included — Claude Code will auto-discover `pdf2markdown` and `arxiv2markdown` tools.
 
 ## Architecture
 
@@ -38,16 +44,18 @@ The `.mcp.json` config is included — Claude Code will auto-discover the `pdf_o
 src/
 ├── service_pdf_ocr.py   # Modal GPU service (DeepSeek-OCR2 + vLLM)
 ├── utils_pdf.ts         # TS utility — calls Modal, saves to MARKDOWN_DIR
+├── utils_arxiv.ts       # TS utility — arXiv API + arxiv2md.org
 └── mcp_server.ts        # MCP server — exposes tools to Claude Code
 ```
 
-Local TS orchestration → remote Modal GPU compute. Scale-to-zero, pay only for what you use.
+Local TS orchestration → remote compute (Modal GPU / arxiv2md API). Scale-to-zero, pay only for what you use.
 
 ## Tools
 
 | Tool | Input | Output |
 | ---- | ----- | ------ |
-| `pdf_ocr` | PDF file path | Markdown file in `MARKDOWN_DIR` |
+| `pdf2markdown` | PDF file path | Markdown file in `MARKDOWN_DIR` |
+| `arxiv2markdown` | arXiv ID, URL, or title | Markdown file in `MARKDOWN_DIR` |
 
 ## Requirements
 
@@ -58,9 +66,10 @@ Local TS orchestration → remote Modal GPU compute. Scale-to-zero, pay only for
 ## Testing
 
 ```bash
-npm run test    # Runs all PDFs in .assets/pdf/ through the pipeline
+npx tsx .test/test-all.ts     # Test all PDFs
+npx tsx .test/test-arxiv.ts   # Test arXiv papers
 ```
 
 ## License
 
-ISC
+[Apache-2.0 License](LICENSE)
