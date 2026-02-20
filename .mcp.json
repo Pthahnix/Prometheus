@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "prometheus": {
+      "command": "npx",
+      "args": ["tsx", "src/mcp_server.ts"]
+    }
+  }
+}

@@ -5,7 +5,7 @@ import sys
 from pathlib import Path
 
 # ---------------------------------------------------------------------------
-# Modal image: clone repo, install deps, patch config
+# Modal image: clone repo, install deps
 # ---------------------------------------------------------------------------
 ocr_image = (
     modal.Image.from_registry(
@@ -71,7 +71,7 @@ def _write_config(model_path: str):
     timeout=86400,
     startup_timeout=1800,
 )
-def pdf2md(pdf_bytes: bytes, filename: str = "input.pdf") -> str:
+def pdf_ocr(pdf_bytes: bytes, pdf_name: str = "input.pdf") -> str:
     """Convert a PDF to markdown. Processes in chunks of CHUNK_SIZE pages."""
     import os, io, re
     os.environ["VLLM_USE_V1"] = "0"
@@ -94,6 +94,7 @@ def pdf2md(pdf_bytes: bytes, filename: str = "input.pdf") -> str:
         "DeepseekOCR2ForCausalLM", DeepseekOCR2ForCausalLM
     )
 
+    print(f"[pdf_ocr] Loading model: {MODEL_NAME}")
     llm = LLM(
         model=MODEL_NAME,
         hf_overrides={"architectures": ["DeepseekOCR2ForCausalLM"]},
@@ -102,6 +103,7 @@ def pdf2md(pdf_bytes: bytes, filename: str = "input.pdf") -> str:
         tensor_parallel_size=1, gpu_memory_utilization=0.9,
         disable_mm_preprocessor_cache=True,
     )
+    model_volume.commit()
 
     logits_processors = [
         NoRepeatNGramLogitsProcessor(
@@ -127,7 +129,7 @@ def pdf2md(pdf_bytes: bytes, filename: str = "input.pdf") -> str:
         images.append(img)
     pdf_doc.close()
     total = len(images)
-    print(f"[pdf2md] {filename}: {total} pages")
+    print(f"[pdf_ocr] {pdf_name}: {total} pages")
 
     processor = DeepseekOCR2Processor()
 
@@ -145,7 +147,7 @@ def pdf2md(pdf_bytes: bytes, filename: str = "input.pdf") -> str:
     md_pages = []
     for start in range(0, total, CHUNK_SIZE):
         chunk = images[start:start + CHUNK_SIZE]
-        print(f"[pdf2md] chunk {start+1}-{start+len(chunk)}/{total}")
+        print(f"[pdf_ocr] chunk {start+1}-{start+len(chunk)}/{total}")
 
         with ThreadPoolExecutor(max_workers=8) as pool:
             batch_inputs = list(pool.map(process_single, chunk))
@@ -168,19 +170,22 @@ def pdf2md(pdf_bytes: bytes, filename: str = "input.pdf") -> str:
             )
             md_pages.append(content)
 
-    return "\n\n".join(md_pages)
+    result = "\n\n".join(md_pages)
+    print(f"[pdf_ocr] Done. Total: {len(result)} chars")
+    return result
 
 
 @app.local_entrypoint()
 def main(pdf_path: str = "", output: str = ""):
-    """Usage: modal run pdf2markdown.py --pdf-path input.pdf [--output out.md]"""
+    """Usage: modal run src/service_pdf_ocr.py --pdf-path input.pdf [--output out.md]"""
     if not pdf_path:
         print("Error: --pdf-path is required")
         return
     pdf_file = Path(pdf_path)
     pdf_bytes = pdf_file.read_bytes()
     print(f"Uploading {pdf_file.name} ({len(pdf_bytes)/1024/1024:.1f} MB)...")
-    md_text = pdf2md.remote(pdf_bytes, pdf_file.name)
+    md_text = pdf_ocr.remote(pdf_bytes, pdf_file.name)
     out_path = Path(output) if output else pdf_file.with_suffix(".md")
+    out_path.parent.mkdir(parents=True, exist_ok=True)
     out_path.write_text(md_text, encoding="utf-8")
     print(f"Done. Output: {out_path} ({len(md_text)} chars)")
