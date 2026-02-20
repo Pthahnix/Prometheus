@@ -3,7 +3,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 import { pdfOcr } from "./utils_pdf.js";
-import { arxivMarkdown } from "./utils_arxiv.js";
+import { arxivMarkdown, arxivTitle } from "./utils_arxiv.js";
 import { resolve, basename } from "path";
 import { mkdirSync, writeFileSync } from "fs";
 
@@ -55,10 +55,10 @@ server.tool(
   },
   async (args) => {
     try {
+      const title = await arxivTitle(args);
       const markdown = await arxivMarkdown(args);
       mkdirSync(MARKDOWN_DIR, { recursive: true });
-      const label = args.id || args.title || args.url || "arxiv";
-      const mdName = sanitizeName(label) + ".md";
+      const mdName = sanitizeName(title) + ".md";
       const mdPath = resolve(MARKDOWN_DIR, mdName);
       writeFileSync(mdPath, markdown, "utf-8");
       return {

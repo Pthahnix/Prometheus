@@ -1,5 +1,3 @@
-// src/utils/arxiv_utils.ts
-
 import 'dotenv/config';
 import fetch from 'node-fetch';
 import { XMLParser } from 'fast-xml-parser';
@@ -119,5 +117,5 @@ export async function arxivMarkdown({ id, url, title }: ArxivInput = {}): Promis
   if (!resp.ok) throw new Error(`arxiv2md ${resp.status}`);
   const data = await resp.json() as { content?: string };
   if (!data.content) throw new Error('arxiv2md returned empty');
-  return '# ' + cleanTitle + '\n\n' + data.content;
+  return data.content;
 }
