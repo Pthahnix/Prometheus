@@ -17,3 +17,7 @@ __pycache__/
 
 # Environment
 .env
+
+# Claude Code
+CLAUDE.md
+.mcp.json
