@@ -18,7 +18,7 @@ Based on the research topic, assess its breadth and set `maxItems`:
 | Medium | A research direction | 50-100 | "LLM reasoning" |
 | Broad | Cross-domain / survey-level | 100-200 | "large language model applications" |
 
-Since only arXiv papers are kept (arXiv typically accounts for ~20-30% of Google Scholar results), the fetch volume should be 3-5x the target paper count.
+Since only arXiv papers are kept (arXiv typically accounts for ~20-30\% of Google Scholar results), the fetch volume should be 3-5x the target paper count.
 
 **Before execution, state**: which breadth level was chosen, the rationale, and the `maxItems` value.
 
