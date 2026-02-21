@@ -1,0 +1,14 @@
+<!-- markdownlint-disable -->
+
+# Ignore claude code
+.claude/
+
+# Ignore personal memory and context
+.memory/
+.context/
+
+# Ignore node_modules
+node_modules/
+
+# Ignore assets
+.assets/

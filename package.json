@@ -18,6 +18,7 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.26.0",
+    "alastor": "file:../ALASTOR",
     "dotenv": "^17.3.1",
     "fast-xml-parser": "^5.3.7",
     "node-fetch": "^3.3.2",

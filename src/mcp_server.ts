@@ -6,6 +6,8 @@ import { basename } from "path";
 import { pdfOcr } from "./utils_pdf.js";
 import { arxivMarkdown, arxivTitle } from "./utils_arxiv.js";
 import { markdownFilename, markdownSave } from "./utils_markdown.js";
+import { evaluatePapers } from "./utils_paper.js";
+import type { PaperInput } from "./utils_paper.js";
 
 const server = new McpServer({
   name: "prometheus",
@@ -81,6 +83,54 @@ server.tool(
 );
 
 // --- Experimental: progress test tool ---------------------------------
+
+server.tool(
+  "evaluate_papers",
+  "Evaluate a list of arXiv papers for a research topic using AI. " +
+  "Downloads full text, saves markdown, and returns tier/recommendation for each paper. " +
+  "Batches of 3 papers concurrently.",
+  {
+    papers: z.array(z.object({
+      title:     z.string().describe("Paper title"),
+      year:      z.number().optional().describe("Publication year"),
+      citations: z.number().optional().describe("Citation count"),
+      arxiv_url: z.string().describe("arXiv URL"),
+    })).describe("List of arXiv papers to evaluate"),
+    query: z.string().describe("Research topic / query for relevance assessment"),
+  },
+  async ({ papers, query }, extra: any) => {
+    try {
+      const progressToken = extra?._meta?.progressToken;
+
+      const results = await evaluatePapers(
+        papers as PaperInput[],
+        query,
+        async ({ message, current, total }) => {
+          if (progressToken !== undefined) {
+            await extra.sendNotification({
+              method: "notifications/progress",
+              params: { progressToken, progress: current, total, message },
+            });
+          }
+          try {
+            await server.sendLoggingMessage({ level: "info", data: message });
+          } catch {}
+        },
+      );
+
+      return {
+        content: [{ type: "text" as const, text: JSON.stringify(results, null, 2) }],
+      };
+    } catch (e: any) {
+      return {
+        isError: true,
+        content: [{ type: "text" as const, text: `evaluate_papers failed: ${e.message}` }],
+      };
+    }
+  }
+);
+
+// --- Experimental: progress test tool (legacy) ------------------------
 
 server.tool(
   "progress_test",

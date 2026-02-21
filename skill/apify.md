@@ -1,6 +1,6 @@
 # Google Scholar Research
 
-Use `marco.gullo/google-scholar-scraper` to search academic papers on Google Scholar, filter for arXiv-only sources, and save results.
+Use `marco.gullo/google-scholar-scraper` to search academic papers on Google Scholar, filter for arXiv-only sources, evaluate with AI, and save results.
 
 ## User Input
 
@@ -22,9 +22,11 @@ Since only arXiv papers are kept (arXiv typically accounts for ~20-30\% of Googl
 
 **Before execution, state**: which breadth level was chosen, the rationale, and the `maxItems` value.
 
-### Step 2: Build Input and Call Actor
+### Step 2: Dual Query — Capture Both Frontier and Classic Work
 
-Call `marco.gullo/google-scholar-scraper` with:
+Execute **two** queries to Google Scholar and merge results:
+
+**Query A — Frontier (newest work):**
 
 ```json
 {
@@ -34,6 +36,19 @@ Call `marco.gullo/google-scholar-scraper` with:
   "proxyOptions": { "useApifyProxy": true }
 }
 ```
+
+**Query B — Relevance (high-impact / classic work):**
+
+```json
+{
+  "keyword": "<search keywords>",
+  "maxItems": "<from Step 1>",
+  "sortBy": "relevance",
+  "proxyOptions": { "useApifyProxy": true }
+}
+```
+
+**Merge & Deduplicate:** Combine results from both queries. Deduplicate by arXiv URL (or title if URL unavailable). Keep the entry with richer metadata when duplicates are found.
 
 **Core input parameters:**
 
@@ -58,36 +73,45 @@ A paper is from arXiv if ANY of the following is true (case-insensitive):
 2. `link` field contains `"arxiv.org"`
 3. `documentLink` field contains `"arxiv.org"`
 
-### Step 4: Paper Value Screening
+### Step 4: AI-Powered Paper Evaluation
 
-Apply the following criteria to arXiv-filtered papers:
+Call the Prometheus MCP tool `evaluate_papers` with the arXiv-filtered paper list:
 
-**Hard requirements (fail = discard):**
+```json
+{
+  "papers": [
+    {
+      "title": "Paper title",
+      "year": 2026,
+      "citations": 0,
+      "arxiv_url": "https://arxiv.org/abs/..."
+    }
+  ],
+  "query": "original research topic"
+}
+```
 
-- Recency: paper year must be within the last 3 years (current year - 2 or later)
-- Title and snippet must be relevant to the research topic
+The tool will, for each paper:
 
-**Soft scoring dimensions (holistic judgment):**
+1. Download full text via `arxiv2markdown`
+2. Save markdown to local `.assets/markdown/`
+3. Run AI evaluation (tier + recommendation)
 
-| Dimension | Weight | Description |
-| ----------- | -------- | ------------- |
-| Citations | High | `citations` field; same-year papers ≥5 is good, older papers should be higher |
-| Topic relevance | High | Keyword density in title and `searchMatch` |
-| Versions | Low | `versions` > 0 indicates active updates |
+Each paper receives:
 
-**Special rules:**
-
-- Papers from the last 6 months are exempt from citation requirements (too new to accumulate citations)
-- If fewer than 5 papers remain after filtering, relax citation thresholds but keep the recency requirement
+- **Tier**: `frontier` (recent, novel) / `rising` (gaining traction) / `foundational` (landmark work)
+- **Recommendation**: `low` / `medium` / `high`
+- **Summary**: 2-3 sentence overview
+- **Key contributions**: list of core contributions
 
 ### Step 5: Save Results
 
-Save filtered papers as a JSON file in `.assets/paper/`.
+Save evaluated papers as a JSON file in `.assets/paper/`.
 
 **Filename format:** `{YYYY-MM-DD}_{topic_keywords}.json`
 
 - Date is the execution date
-- Topic keywords: core words from user input, lowercase, spaces → `_`, strip special characters
+- Topic keywords: core words from user input, lowercase, spaces to `_`, strip special characters
 - Example: `2026-02-21_llm_reasoning.json`
 
 **JSON structure:**
@@ -96,17 +120,22 @@ Save filtered papers as a JSON file in `.assets/paper/`.
 {
   "query": "original search keywords",
   "date": "execution date",
-  "total_fetched": 80,
+  "total_fetched": 160,
   "arxiv_count": 45,
-  "total_filtered": 16,
+  "evaluated_count": 45,
   "papers": [
     {
       "title": "Paper title",
       "authors": "Author list",
       "year": 2026,
       "citations": 0,
-      "arxiv_url": "arXiv link (prefer documentLink, fallback to link)",
-      "snippet": "searchMatch excerpt"
+      "arxiv_url": "arXiv link",
+      "snippet": "searchMatch excerpt",
+      "markdown_path": "local markdown file path",
+      "tier": "frontier",
+      "recommendation": "high",
+      "summary": "AI-generated summary",
+      "key_contributions": ["contribution 1"]
     }
   ]
 }
@@ -116,6 +145,10 @@ Save filtered papers as a JSON file in `.assets/paper/`.
 
 After execution, report to the user:
 
-- Pipeline: total fetched → arXiv filtered → value screened
-- Table of final papers (title, authors, year, citations, arXiv link)
-- Saved file path
+- Pipeline: total fetched → arXiv filtered → evaluated
+- **Three tables grouped by recommendation level:**
+  - **High** (core papers): title, tier, year, citations, arXiv link — these papers' full markdown is saved and their references should be tracked for deeper research
+  - **Medium** (relevant papers): title, tier, year, citations, arXiv link — full markdown saved, worth reading
+  - **Low** (peripheral papers): title, tier, AI summary — only summary provided, no deep reading needed
+- Saved JSON file path
+- Saved markdown directory path

@@ -38,6 +38,35 @@ const md2 = await arxivMarkdown({ title: "Attention Is All You Need" });
 **Output:** Markdown saved to `MARKDOWN_DIR` (default: `.assets/markdown/`).
 Filename is sanitized: lowercase, special chars → `_`, no trailing `_`.
 
+### evaluate_papers
+
+Evaluate a list of arXiv papers for a research topic using AI. Downloads full text, saves markdown, and returns tier/recommendation for each paper. Batches of 3 papers concurrently.
+
+Best for: automated literature review, research paper triage, vibe researching pipelines.
+Designed to be called by the `apify` Google Scholar skill after arXiv filtering.
+
+**Usage via MCP:**
+The `prometheus` MCP server exposes `evaluate_papers` tool. Pass `papers` (array of `{title, year?, citations?, arxiv_url}`) and `query` (research topic).
+
+**Usage via code:**
+
+```typescript
+import { evaluatePapers } from "./src/utils_paper.js";
+const results = await evaluatePapers(
+  [{ title: "Paper", arxiv_url: "https://arxiv.org/abs/..." }],
+  "research topic",
+  async (p) => console.log(p.message),
+);
+```
+
+**Output per paper:**
+
+- `tier`: `frontier` (recent, novel) / `rising` (gaining traction) / `foundational` (landmark)
+- `recommendation`: `low` (summary only) / `medium` (worth reading) / `high` (core paper, track citations)
+- `summary`: 2-3 sentence overview
+- `key_contributions`: list of core contributions
+- `markdown_path`: saved full-text markdown path
+
 ## Architecture
 
 - `src/utils_*.ts` — TS utility functions (local orchestration)
