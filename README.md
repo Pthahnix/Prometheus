@@ -57,15 +57,6 @@ MCP Client (Claude Code)
 | `arxiv2markdown` | arXiv paper → Markdown |
 | `evaluate_papers` | Batch AI evaluation: tier + recommendation per paper |
 
-## Testing
-
-```bash
-npx tsx .test/test-all.ts       # PDF conversion
-npx tsx .test/test-arxiv.ts     # arXiv fetching
-npx tsx .test/test-evaluate.ts  # Single paper evaluation
-npx tsx .test/test-paper.ts     # Batch evaluation
-```
-
 ## License
 
 [Apache-2.0 License](LICENSE)
