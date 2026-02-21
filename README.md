@@ -14,6 +14,12 @@ Thin orchestration layer with fully serverless compute backend, accessed via MCP
 - Convert PDFs and arXiv papers to AI-readable markdown
 - Dual-query strategy (recency + relevance) for comprehensive literature coverage
 
+## How It Works
+
+Most academic AI tools only read abstracts — a few hundred words — to triage papers. Prometheus downloads the full paper text, converts it to markdown, and lets AI evaluate based on complete methodology, experiments, and discussion. This is a meaningful difference in evaluation quality.
+
+Focused on arXiv open-access papers to avoid paywall issues. Serverless compute + bring-your-own API key keeps costs transparent and scalable.
+
 ## Quick Start
 
 ```bash
