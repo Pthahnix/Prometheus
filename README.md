@@ -1,6 +1,18 @@
 # Prometheus
 
-any2md toolkit — convert any information source to AI-readable markdown.
+Vibe researching toolkit — AI-powered academic research automation, from literature discovery to deep analysis.
+
+> [!NOTE]
+> This is a work-in-progress personal project, under active development.
+
+Thin orchestration layer with fully serverless compute backend, accessed via MCP protocol.
+
+## What It Does
+
+- Search and filter academic papers from Google Scholar (arXiv sources)
+- AI-evaluate papers: classify by tier (frontier / rising / foundational) and recommendation level
+- Convert PDFs and arXiv papers to AI-readable markdown
+- Dual-query strategy (recency + relevance) for comprehensive literature coverage
 
 ## Quick Start
 
@@ -12,70 +24,46 @@ Set up `.env`:
 
 ```bash
 MARKDOWN_DIR=.assets/markdown/
-API_KEY_CHAT=your-openrouter-key
-BASE_URL_CHAT=https://openrouter.ai/api/v1
-MODEL_CHAT=moonshotai/kimi-k2.5
+API_KEY_CHAT=your-api-key
+BASE_URL_CHAT=https://your-llm-provider/api/v1
+MODEL_CHAT=your-model-name
 ```
 
-### Convert a PDF
-
-```bash
-# Via Modal CLI directly
-modal run src/service_pdf_ocr.py --pdf-path path/to/file.pdf --output output.md
-
-# Via TypeScript utility
-npx tsx -e "import {pdfOcr} from './src/utils_pdf.js'; await pdfOcr({path: 'path/to/file.pdf'})"
-```
-
-### Fetch an arXiv paper
-
-```bash
-npx tsx -e "import {arxivMarkdown} from './src/utils_arxiv.js'; console.log(await arxivMarkdown({id: '2205.14135'}))"
-```
-
-### MCP Server (Claude Code integration)
+### MCP Server
 
 ```bash
 npm run mcp
 ```
 
-The `.mcp.json` config is included — Claude Code will auto-discover `pdf2markdown` and `arxiv2markdown` tools.
+The `.mcp.json` config is included — Claude Code will auto-discover all tools.
 
 ## Architecture
 
 ```bash
-src/
-├── service_pdf_ocr.py   # Modal GPU service (DeepSeek-OCR2 + vLLM)
-├── utils_pdf.ts         # TS utility — calls Modal, returns content string
-├── utils_arxiv.ts       # TS utility — arXiv API + arxiv2md.org, returns content string
-├── utils_paper.ts       # TS utility — AI paper evaluation via Alastor SingleStepReasoning
-├── utils_markdown.ts    # Shared — filename sanitization + save to MARKDOWN_DIR
-└── mcp_server.ts        # MCP server — orchestrates utils, exposes tools
+MCP Client (Claude Code)
+    │
+    └── mcp_server.ts (local orchestration)
+            ├── utils_arxiv.ts    → arxiv2md API
+            ├── utils_pdf.ts      → GPU serverless (OCR)
+            ├── utils_paper.ts    → LLM serverless (evaluation)
+            └── utils_markdown.ts → local file I/O
 ```
-
-Local TS orchestration → remote compute (Modal GPU / arxiv2md API). Scale-to-zero, pay only for what you use.
 
 ## Tools
 
-| Tool | Input | Output |
-| ---- | ----- | ------ |
-| `pdf2markdown` | PDF file path | Markdown file in `MARKDOWN_DIR` (with progress notifications) |
-| `arxiv2markdown` | arXiv ID, URL, or title | Markdown file in `MARKDOWN_DIR` |
-| `evaluate_papers` | List of arXiv papers + research topic | JSON with tier/recommendation per paper + saved markdown files |
-
-## Requirements
-
-- Node.js 18+
-- Python 3.11+ with `modal` (`conda activate basic`)
-- Modal account with GPU access
+| Tool | Description |
+| ---- | ----------- |
+| `pdf2markdown` | PDF → Markdown via GPU OCR |
+| `arxiv2markdown` | arXiv paper → Markdown |
+| `evaluate_papers` | Batch AI evaluation: tier + recommendation per paper |
 
 ## Testing
 
 ```bash
-npx tsx .test/test-all.ts       # Test all PDFs
-npx tsx .test/test-arxiv.ts     # Test arXiv papers
-npx tsx .test/test-evaluate.ts  # Test single paper AI evaluation
-npx tsx .test/test-paper.ts     # Test batch paper evaluation (3 papers)
+npx tsx .test/test-all.ts       # PDF conversion
+npx tsx .test/test-arxiv.ts     # arXiv fetching
+npx tsx .test/test-evaluate.ts  # Single paper evaluation
+npx tsx .test/test-paper.ts     # Batch evaluation
 ```
 
 ## License
