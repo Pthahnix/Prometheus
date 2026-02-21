@@ -1,6 +1,6 @@
-# Prometheus — any2md Toolkit
+# Prometheus — Vibe Researching Toolkit
 
-Convert any information source to AI-readable markdown.
+AI-powered academic research automation — from literature discovery to deep analysis. Thin orchestration layer with fully serverless compute backend, accessed via MCP protocol.
 
 ## Available Tools
 
