@@ -3,7 +3,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 import { basename } from "path";
-import { pdfOcr } from "./utils_pdf.js";
+import { pdf2Markdown } from "./utils_pdf.js";
 import { arxivMarkdown, arxivTitle } from "./utils_arxiv.js";
 import { markdownFilename, markdownSave } from "./utils_markdown.js";
 import { evaluatePapers } from "./utils_paper.js";
@@ -18,14 +18,14 @@ const server = new McpServer({
 
 server.tool(
   "pdf2markdown",
-  "Convert a PDF file to markdown via DeepSeek-OCR2 on Modal GPU. " +
-  "Cold-start ~3min, then ~1min/page. Returns markdown text.",
+  "Convert a PDF file to markdown via MinerU cloud API. " +
+  "Returns markdown text.",
   { pdf_path: z.string().describe("Absolute or relative path to the PDF file") },
   async ({ pdf_path }, extra: any) => {
     try {
       const progressToken = extra?._meta?.progressToken;
 
-      const content = await pdfOcr({
+      const content = await pdf2Markdown({
         path: pdf_path,
         onProgress: async ({ message, current, total }) => {
           // Structured progress notification

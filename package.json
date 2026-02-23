@@ -12,12 +12,14 @@
   "license": "ISC",
   "type": "module",
   "devDependencies": {
+    "@types/adm-zip": "^0.5.7",
     "@types/node": "^25.3.0",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.26.0",
+    "adm-zip": "^0.5.16",
     "alastor": "file:../ALASTOR",
     "dotenv": "^17.3.1",
     "fast-xml-parser": "^5.3.7",
