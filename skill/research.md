@@ -11,7 +11,7 @@ $ARGUMENTS — research topic, question, or specific paper
 Assess the user's intent and pick the appropriate strategy:
 
 | Strategy | When to Use | Typical Scope |
-|----------|-------------|---------------|
+| ---------- | ------------- | --------------- |
 | **quick** | Specific question, single paper, or known topic | 1-3 papers or pages |
 | **survey** | Literature review, topic exploration, "what's the state of X" | 10-30+ papers |
 | **deep** | Trace a paper's intellectual lineage, find foundational work | 1 seed → recursive refs |
@@ -30,6 +30,7 @@ Goal: Answer a specific question or retrieve a specific paper quickly.
 4. Summarize findings, cite sources with paper titles
 
 Decision points:
+
 - If `acd_search` returns nothing useful → try `web_search` as fallback
 - If a paper's full text wasn't obtained (no `markdownDir`) → note it, don't block on it
 
@@ -49,6 +50,7 @@ Goal: Comprehensive literature review on a topic. Discover, collect, and organiz
 7. Present results grouped by rating, with summary per paper
 
 Decision points:
+
 - If initial results are too narrow → broaden query terms, add synonyms
 - If too many results → add year filters or more specific keywords in follow-up queries
 - If a subfield emerges as important → run a focused `acd_search` on that subfield
@@ -68,6 +70,7 @@ Goal: Trace a paper's reference tree to understand its intellectual context.
 6. Optionally: for the most important discovered papers, run another `dfs_search` to go deeper
 
 Decision points:
+
 - If seed paper has no `s2Id` (Semantic Scholar can't find it) → fall back to `acd_search` with the paper's key terms
 - If DFS returns mostly irrelevant papers → reduce breadth, or stop early
 - If a foundational paper appears repeatedly in references → it's important, prioritize reading it
@@ -83,6 +86,7 @@ Goal: Gather non-academic information — blog posts, documentation, tutorials, 
 5. Present findings with source URLs
 
 Decision points:
+
 - If search results are low quality → rephrase query, try adding "tutorial", "guide", "explained", site-specific terms
 - If a page's content is thin → try the next result instead of dwelling on it
 - If the topic has academic depth too → suggest escalating to **hybrid**
@@ -104,12 +108,13 @@ Goal: Complex research question requiring both academic papers and web sources.
 When presenting results, rate each paper for the user:
 
 | Rating | Meaning | Action |
-|--------|---------|--------|
+| -------- | --------- | -------- |
 | **high** | Core paper, directly relevant, high impact | Read fully, track its references |
 | **medium** | Useful context, relevant technique or result | Read fully, note key points |
 | **low** | Tangential, redundant, or low quality | Summary only, skip deep reading |
 
 Rating criteria (use your judgment, weigh all factors):
+
 - Relevance to the user's specific question
 - Citation count relative to age (a 2025 paper with 50 citations > a 2018 paper with 50)
 - Venue quality if known

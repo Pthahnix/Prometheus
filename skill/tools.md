@@ -9,12 +9,13 @@ MCP server with 5 tools for academic research and web content retrieval. All too
 Convert a single paper to markdown. Smart routing based on input type.
 
 | Param | Type | Description |
-|-------|------|-------------|
+| ------- | ------ | ------------- |
 | `title` | string? | Paper title (triggers title→markdown pipeline) |
 | `url` | string? | arXiv URL or PDF URL |
 | `dir` | string? | Local PDF file path |
 
 Routing logic:
+
 - arXiv URL → fetch metadata by ID + convert via arxiv2md.org
 - PDF URL or local path → convert via MinerU
 - Title only → fallback chain: arXiv search → Semantic Scholar → Unpaywall OA PDF → MinerU
@@ -26,7 +27,7 @@ Returns `PaperResult` with `markdownDir` pointing to cached full-text.
 Broad academic search. Queries Google Scholar, fetches full text for each result.
 
 | Param | Type | Description |
-|-------|------|-------------|
+| ------- | ------ | ------------- |
 | `query` | string | Search keywords for Google Scholar |
 
 Pipeline: Google Scholar (via Apify) → for each paper, attempt arXiv content → fallback to title2markdown pipeline. Processes in batches of 3.
@@ -38,7 +39,7 @@ Returns `PaperResult[]` — each with metadata and `markdownDir` where content w
 Deep reference exploration. Follows a paper's references recursively via Semantic Scholar.
 
 | Param | Type | Description |
-|-------|------|-------------|
+| ------- | ------ | ------------- |
 | `title` | string | Paper title |
 | `normalizedTitle` | string | Normalized title for dedup |
 | `s2Id` | string? | Semantic Scholar paper ID (looked up if omitted) |
@@ -53,7 +54,7 @@ Returns flat `PaperResult[]` of all discovered papers across all depth levels.
 Search the web via Brave Search API. Returns result list without content.
 
 | Param | Type | Description |
-|-------|------|-------------|
+| ------- | ------ | ------------- |
 | `query` | string | Search query |
 | `count` | number? | Max results (default 10) |
 
@@ -64,7 +65,7 @@ Returns `WebResult[]` with `title`, `url`, `description`. Use `web_content` to f
 Fetch a web page and convert to markdown. Caches locally.
 
 | Param | Type | Description |
-|-------|------|-------------|
+| ------- | ------ | ------------- |
 | `url` | string | URL to fetch |
 | `title` | string? | Page title (derived from URL if omitted) |
 
