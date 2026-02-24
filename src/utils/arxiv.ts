@@ -73,4 +73,17 @@ export async function query(title: string): Promise<PaperResult | null> {
   return parseEntry(entry);
 }
 
+/** Query arXiv by paper ID. Returns metadata or null. */
+export async function queryById(id: string): Promise<PaperResult | null> {
+  const cleanId = id.replace(/^arXiv:/i, "").replace(/v\d+$/, "");
+  const params = new URLSearchParams({ id_list: cleanId, max_results: "1" });
+  const resp = await fetch(`${BASE_API}?${params}`);
+  if (!resp.ok) return null;
+  const parsed = new XMLParser().parse(await resp.text());
+  const entry = Array.isArray(parsed?.feed?.entry)
+    ? parsed.feed.entry[0]
+    : parsed?.feed?.entry;
+  return parseEntry(entry);
+}
+
 export { urlToId, idToUrl };

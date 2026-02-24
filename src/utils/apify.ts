@@ -47,9 +47,9 @@ export async function googleScholarSearch(
       arxivUrl: arxivId ? `https://arxiv.org/abs/${arxivId}` : undefined,
       year,
       authors: item.authors ?? undefined,
-      abstract: item.description ?? undefined,
-      citationCount: item.citedBy != null ? Number(item.citedBy) : undefined,
-      pdfUrl: item.pdfUrl ?? undefined,
+      abstract: item.searchMatch ?? undefined,
+      citationCount: item.citations != null ? Number(item.citations) : undefined,
+      pdfUrl: item.documentLink ?? undefined,
       sourceUrl: item.link ?? undefined,
     } satisfies PaperResult;
   });

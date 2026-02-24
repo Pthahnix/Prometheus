@@ -120,8 +120,8 @@ export async function paper2markdown(
       arxivId: id,
       arxivUrl,
     };
-    // Enrich metadata from arXiv API
-    const meta = await arxiv.query(base.title || id);
+    // Enrich metadata from arXiv API (by ID, not title search)
+    const meta = await arxiv.queryById(id);
     if (meta) Object.assign(base, meta);
     // Get content
     const md = await arxiv.content(arxivUrl);
