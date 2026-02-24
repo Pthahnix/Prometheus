@@ -4,6 +4,7 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { z } from "zod";
 import { paper2markdown } from "./tools/markdown.js";
 import { acdSearch, dfsSearch } from "./tools/academic.js";
+import { webSearch, webContent } from "./tools/web.js";
 
 const server = new McpServer({
   name: "prometheus",
@@ -92,6 +93,42 @@ server.tool(
       return { content: [{ type: "text" as const, text: JSON.stringify(results, null, 2) }] };
     } catch (e: any) {
       return { isError: true, content: [{ type: "text" as const, text: `dfs_search failed: ${e.message}` }] };
+    }
+  },
+);
+
+server.tool(
+  "web_search",
+  "Search the web via Brave Search. Returns a list of results with title, URL, and description. " +
+  "Use web_content to fetch full markdown for specific URLs.",
+  {
+    query: z.string().describe("Search query"),
+    count: z.number().optional().describe("Max results (default 10)"),
+  },
+  async (args) => {
+    try {
+      const results = await webSearch(args.query, args.count);
+      return { content: [{ type: "text" as const, text: JSON.stringify(results, null, 2) }] };
+    } catch (e: any) {
+      return { isError: true, content: [{ type: "text" as const, text: `web_search failed: ${e.message}` }] };
+    }
+  },
+);
+
+server.tool(
+  "web_content",
+  "Fetch a web page and convert it to markdown. Caches the result locally. " +
+  "Returns metadata with cached markdown path.",
+  {
+    url: z.string().describe("URL to fetch"),
+    title: z.string().optional().describe("Page title (derived from URL if omitted)"),
+  },
+  async (args) => {
+    try {
+      const result = await webContent(args.url, args.title);
+      return { content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }] };
+    } catch (e: any) {
+      return { isError: true, content: [{ type: "text" as const, text: `web_content failed: ${e.message}` }] };
     }
   },
 );

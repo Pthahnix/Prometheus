@@ -22,3 +22,11 @@ export interface PaperResult {
   // cache
   markdownDir?: string;
 }
+
+export interface WebResult {
+  title: string;
+  normalizedTitle: string;
+  url: string;
+  description?: string;
+  markdownDir?: string;
+}

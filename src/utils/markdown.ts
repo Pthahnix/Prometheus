@@ -7,11 +7,13 @@ import type { PaperResult } from "../types.js";
 const DIR_CACHE = resolve(process.env.DIR_CACHE || ".cache");
 const DIR_MARKDOWN = resolve(DIR_CACHE, "markdown");
 const DIR_PAPER = resolve(DIR_CACHE, "paper");
+const DIR_WEB = resolve(DIR_CACHE, "web");
 
 /** Ensure cache directories exist. */
 function ensureDirs(): void {
   mkdirSync(DIR_MARKDOWN, { recursive: true });
   mkdirSync(DIR_PAPER, { recursive: true });
+  mkdirSync(DIR_WEB, { recursive: true });
 }
 
 /** Save markdown content to cache. Returns the absolute file path. */
@@ -37,4 +39,13 @@ export function loadPaperMeta(normalizedTitle: string): PaperResult | null {
   const filePath = resolve(DIR_PAPER, normalizedTitle + ".json");
   if (!existsSync(filePath)) return null;
   return JSON.parse(readFileSync(filePath, "utf-8"));
+}
+
+/** Save web page markdown to cache. Returns the absolute file path. */
+export function saveWeb(title: string, markdown: string): string {
+  ensureDirs();
+  const filename = normTitle(title) + ".md";
+  const filePath = resolve(DIR_WEB, filename);
+  writeFileSync(filePath, markdown, "utf-8");
+  return filePath;
 }
