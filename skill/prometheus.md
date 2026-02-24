@@ -1,80 +1,97 @@
-# Prometheus — Vibe Researching Toolkit
+# Prometheus — Tool Reference
 
-AI-powered academic research automation — from literature discovery to deep analysis. Thin orchestration layer with fully serverless compute backend, accessed via MCP protocol.
+MCP server with 5 tools for academic research and web content retrieval. All tools cache results locally under `DIR_CACHE`.
 
-## Available Tools
+## Tools
 
-### pdf2markdown
+### paper2markdown
 
-Convert PDF files to markdown using DeepSeek-OCR2 on Modal GPU.
-Best for: scanned papers, PDF ebooks, documents that can't be fetched from the web.
-Sends real-time MCP progress notifications (page count, chunk progress, completion).
+Convert a single paper to markdown. Smart routing based on input type.
 
-**Usage via MCP:**
-The `prometheus` MCP server exposes `pdf2markdown` tool. Pass `pdf_path` (absolute or relative).
+| Param | Type | Description |
+|-------|------|-------------|
+| `title` | string? | Paper title (triggers title→markdown pipeline) |
+| `url` | string? | arXiv URL or PDF URL |
+| `dir` | string? | Local PDF file path |
 
-**Usage via code:**
+Routing logic:
+- arXiv URL → fetch metadata by ID + convert via arxiv2md.org
+- PDF URL or local path → convert via MinerU
+- Title only → fallback chain: arXiv search → Semantic Scholar → Unpaywall OA PDF → MinerU
+
+Returns `PaperResult` with `markdownDir` pointing to cached full-text.
+
+### acd_search
+
+Broad academic search. Queries Google Scholar, fetches full text for each result.
+
+| Param | Type | Description |
+|-------|------|-------------|
+| `query` | string | Search keywords for Google Scholar |
+
+Pipeline: Google Scholar (via Apify) → for each paper, attempt arXiv content → fallback to title2markdown pipeline. Processes in batches of 3.
+
+Returns `PaperResult[]` — each with metadata and `markdownDir` where content was obtained.
+
+### dfs_search
+
+Deep reference exploration. Follows a paper's references recursively via Semantic Scholar.
+
+| Param | Type | Description |
+|-------|------|-------------|
+| `title` | string | Paper title |
+| `normalizedTitle` | string | Normalized title for dedup |
+| `s2Id` | string? | Semantic Scholar paper ID (looked up if omitted) |
+| `depth` | number | Max recursion depth |
+| `breadth` | number | Max references per level |
+| `visited` | string[]? | Already visited normalizedTitles |
+
+Returns flat `PaperResult[]` of all discovered papers across all depth levels.
+
+### web_search
+
+Search the web via Brave Search API. Returns result list without content.
+
+| Param | Type | Description |
+|-------|------|-------------|
+| `query` | string | Search query |
+| `count` | number? | Max results (default 10) |
+
+Returns `WebResult[]` with `title`, `url`, `description`. Use `web_content` to fetch full page markdown.
+
+### web_content
+
+Fetch a web page and convert to markdown. Caches locally.
+
+| Param | Type | Description |
+|-------|------|-------------|
+| `url` | string | URL to fetch |
+| `title` | string? | Page title (derived from URL if omitted) |
+
+Returns `WebResult` with `markdownDir` pointing to cached markdown file.
+
+## Data Types
 
 ```typescript
-import { pdfOcr } from "./src/utils_pdf.js";
-const md = await pdfOcr({ path: ".assets/pdf/paper.pdf" });
+PaperResult {
+  title, normalizedTitle,
+  arxivId?, doi?, s2Id?,
+  year?, authors?, abstract?, citationCount?,
+  arxivUrl?, pdfUrl?, sourceUrl?,
+  markdownDir?  // path to cached full-text markdown
+}
+
+WebResult {
+  title, normalizedTitle, url,
+  description?,
+  markdownDir?  // path to cached page markdown
+}
 ```
 
-### arxiv2markdown
+## Cache Structure
 
-Fetch the full markdown text of an arXiv paper. Provide at least one of: id, url, or title.
+- `DIR_CACHE/markdown/` — paper full-text (.md)
+- `DIR_CACHE/paper/` — paper metadata (.json)
+- `DIR_CACHE/web/` — web page content (.md)
 
-**Usage via MCP:**
-The `prometheus` MCP server exposes `arxiv2markdown` tool. Pass `id`, `url`, or `title`.
-
-**Usage via code:**
-
-```typescript
-import { arxivMarkdown } from "./src/utils_arxiv.js";
-const md = await arxivMarkdown({ id: "2205.14135" });
-const md2 = await arxivMarkdown({ title: "Attention Is All You Need" });
-```
-
-**Output:** Markdown saved to `MARKDOWN_DIR` (default: `.assets/markdown/`).
-Filename is sanitized: lowercase, special chars → `_`, no trailing `_`.
-
-### evaluate_papers
-
-Evaluate a list of arXiv papers for a research topic using AI. Downloads full text, saves markdown, and returns tier/recommendation for each paper. Batches of 3 papers concurrently.
-
-Best for: automated literature review, research paper triage, vibe researching pipelines.
-Designed to be called by the `apify` Google Scholar skill after arXiv filtering.
-
-**Usage via MCP:**
-The `prometheus` MCP server exposes `evaluate_papers` tool. Pass `papers` (array of `{title, year?, citations?, arxiv_url}`) and `query` (research topic).
-
-**Usage via code:**
-
-```typescript
-import { evaluatePapers } from "./src/utils_paper.js";
-const results = await evaluatePapers(
-  [{ title: "Paper", arxiv_url: "https://arxiv.org/abs/..." }],
-  "research topic",
-  async (p) => console.log(p.message),
-);
-```
-
-**Output per paper:**
-
-- `tier`: `frontier` (recent, novel) / `rising` (gaining traction) / `foundational` (landmark)
-- `recommendation`: `low` (summary only) / `medium` (worth reading) / `high` (core paper, track citations)
-- `summary`: 2-3 sentence overview
-- `key_contributions`: list of core contributions
-- `markdown_path`: saved full-text markdown path
-
-## Architecture
-
-- `src/utils_*.ts` — TS utility functions (local orchestration)
-- `src/service_*.py` — Modal backend services (remote GPU compute)
-- `src/mcp_server.ts` — MCP server entry point
-
-## Notes
-
-- Modal services are deploy-on-invoke (cold start ~3min, then ~1min/page)
-- Set `MARKDOWN_DIR` in `.env` to change output directory
-- Run `modal run src/service_pdf_ocr.py --pdf-path <file>` for direct CLI usage
+Filenames are normalized: lowercase, non-alphanumeric → `_`, no trailing `_`.
