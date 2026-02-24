@@ -2,16 +2,7 @@
   "mcpServers": {
     "prometheus": {
       "command": "npx",
-      "args": ["tsx", "src/mcp_server.ts"],
-      "cwd": "D:/PROMETHEUS"
-    },
-    "apify": {
-      "command": "npx",
-      "args": ["-y", "@apify/actors-mcp-server", "--tools", "apify/rag-web-browser,marco.gullo/google-scholar-scraper"],
-      "cwd": "D:/PROMETHEUS",
-      "env": {
-        "APIFY_TOKEN": "<your-apify-token>"
-      }
+      "args": ["tsx", "src/mcp_server.ts"]
     }
   }
 }
