@@ -5,20 +5,19 @@ Vibe researching toolkit — AI-powered academic research automation, from liter
 > [!NOTE]
 > This is a work-in-progress personal project, under active development.
 
-Thin orchestration layer with fully serverless compute backend, accessed via MCP protocol.
-
 ## What It Does
 
-- Search and filter academic papers from Google Scholar (arXiv sources)
-- AI-evaluate papers: classify by tier (frontier / rising / foundational) and recommendation level
-- Convert PDFs and arXiv papers to AI-readable markdown
-- Dual-query strategy (recency + relevance) for comprehensive literature coverage
+- Search and filter academic papers from Google Scholar
+- Deep reference exploration via Semantic Scholar citation graphs
+- Convert arXiv papers, PDFs, and web pages to AI-readable markdown
+- Web search via Brave Search API for non-academic sources
+- Full-text caching for offline access and repeated queries
 
 ## How It Works
 
-Most academic AI tools only read abstracts — a few hundred words — to triage papers. Prometheus downloads the full paper text, converts it to markdown, and lets AI evaluate based on complete methodology, experiments, and discussion. This is a meaningful difference in evaluation quality.
+Most academic AI tools only read abstracts to triage papers. Prometheus downloads the full paper text, converts it to markdown, and lets AI evaluate based on complete methodology, experiments, and discussion.
 
-Focused on arXiv open-access papers to avoid paywall issues. Serverless compute + bring-your-own API key keeps costs transparent and scalable.
+Three-layer architecture: atomic API wrappers (`utils/`) → pipeline orchestration (`tools/`) → MCP server registration (`mcp_server.ts`).
 
 ## Quick Start
 
@@ -29,10 +28,11 @@ npm install
 Set up `.env`:
 
 ```bash
-MARKDOWN_DIR=.assets/markdown/
-API_KEY_CHAT=your-api-key
-BASE_URL_CHAT=https://your-llm-provider/api/v1
-MODEL_CHAT=your-model-name
+DIR_CACHE=.cache/
+TOKEN_MINERU=your-mineru-token
+TOKEN_APIFY=your-apify-token
+TOKEN_BRAVE=your-brave-token
+EMAIL_UNPAYWALL=your-email
 ```
 
 ### MCP Server
@@ -43,25 +43,36 @@ npm run mcp
 
 The `.mcp.json` config is included — Claude Code will auto-discover all tools.
 
-## Architecture
-
-```bash
-MCP Client (Claude Code)
-    │
-    └── mcp_server.ts (local orchestration)
-            ├── utils_arxiv.ts    → arxiv2md API
-            ├── utils_pdf.ts      → GPU serverless (OCR)
-            ├── utils_paper.ts    → LLM serverless (evaluation)
-            └── utils_markdown.ts → local file I/O
-```
-
 ## Tools
 
 | Tool | Description |
 | ---- | ----------- |
-| `pdf2markdown` | PDF → Markdown via GPU OCR |
-| `arxiv2markdown` | arXiv paper → Markdown |
-| `evaluate_papers` | Batch AI evaluation: tier + recommendation per paper |
+| `paper2markdown` | Convert a paper to markdown (arXiv URL, PDF, or title → smart routing) |
+| `acd_search` | Academic search via Google Scholar → fetch full text → cache |
+| `dfs_search` | Deep reference exploration via DFS (Semantic Scholar references) |
+| `web_search` | Search the web via Brave Search API |
+| `web_content` | Fetch a web page as markdown and cache it |
+
+## Architecture
+
+```
+MCP Client (Claude Code)
+    │
+    └── mcp_server.ts ─── tool registration
+            │
+            ├── tools/markdown.ts  → paper2markdown
+            ├── tools/academic.ts  → acd_search, dfs_search
+            └── tools/web.ts       → web_search, web_content
+                    │
+                    ├── utils/arxiv.ts     → arxiv2md.org, arXiv API
+                    ├── utils/ss.ts        → Semantic Scholar
+                    ├── utils/unpaywall.ts → Unpaywall
+                    ├── utils/pdf.ts       → MinerU cloud API
+                    ├── utils/apify.ts     → Apify (Google Scholar)
+                    ├── utils/brave.ts     → Brave Search API
+                    ├── utils/web.ts       → Apify rag-web-browser
+                    └── utils/markdown.ts  → local file I/O
+```
 
 ## License
 
