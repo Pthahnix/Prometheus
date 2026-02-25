@@ -30,3 +30,16 @@ export interface WebResult {
   description?: string;
   markdownDir?: string;
 }
+
+export interface PplxSearchResult {
+  title: string;
+  url: string;
+  snippet: string;
+  date?: string;
+}
+
+export interface PplxResult {
+  answer: string;
+  citations: string[];
+  searchResults: PplxSearchResult[];
+}
