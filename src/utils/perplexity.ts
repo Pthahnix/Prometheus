@@ -54,3 +54,54 @@ export async function search(
   }));
   return results;
 }
+
+// ── Chat Completions API ────────────────────────────────────────────
+
+export interface ChatMessage {
+  role: "system" | "user" | "assistant";
+  content: string;
+}
+
+export interface ChatOptions {
+  model?: string;
+  search_context_size?: "low" | "medium" | "high";
+  search_mode?: "web" | "academic" | "sec";
+  search_type?: "auto" | "pro";
+  response_format?: { type: "json_schema"; json_schema: unknown };
+  reasoning_effort?: "low" | "medium" | "high";
+}
+
+export interface ChatResponse {
+  answer: string;
+  citations: string[];
+}
+
+export async function chat(
+  messages: ChatMessage[],
+  options?: ChatOptions,
+): Promise<ChatResponse> {
+  const model = options?.model ?? "sonar-pro";
+  const body: Record<string, unknown> = { model, messages };
+  if (options?.search_context_size) body.search_context_size = options.search_context_size;
+  if (options?.search_mode) body.search_mode = options.search_mode;
+  if (options?.search_type) body.search_type = options.search_type;
+  if (options?.response_format) body.response_format = options.response_format;
+  if (options?.reasoning_effort) body.reasoning_effort = options.reasoning_effort;
+
+  const resp = await fetch(`${BASE_URL}/chat/completions`, {
+    method: "POST",
+    headers: headers(),
+    body: JSON.stringify(body),
+  });
+  if (!resp.ok) {
+    const text = await resp.text();
+    throw new Error(`Perplexity Chat API error ${resp.status}: ${text}`);
+  }
+
+  const data = (await resp.json()) as any;
+  const choice = data.choices?.[0];
+  return {
+    answer: choice?.message?.content ?? "",
+    citations: data.citations ?? [],
+  };
+}
