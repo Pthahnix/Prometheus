@@ -105,3 +105,61 @@ export async function chat(
     citations: data.citations ?? [],
   };
 }
+
+// ── Async Chat Completions API ──────────────────────────────────────
+
+export interface AsyncResult {
+  status: "COMPLETED" | "IN_PROGRESS";
+  answer: string;
+  citations: string[];
+}
+
+export async function asyncChat(
+  messages: ChatMessage[],
+  options?: ChatOptions,
+): Promise<string> {
+  const model = options?.model ?? "sonar-deep-research";
+  const request: Record<string, unknown> = { model, messages };
+  if (options?.search_context_size) request.search_context_size = options.search_context_size;
+  if (options?.reasoning_effort) request.reasoning_effort = options.reasoning_effort;
+
+  const resp = await fetch(`${BASE_URL}/async/chat/completions`, {
+    method: "POST",
+    headers: headers(),
+    body: JSON.stringify({ request }),
+  });
+  if (!resp.ok) {
+    const text = await resp.text();
+    throw new Error(`Perplexity Async API error ${resp.status}: ${text}`);
+  }
+
+  const data = (await resp.json()) as any;
+  const requestId = data.id;
+  if (!requestId) throw new Error("No request ID returned from async API");
+  return requestId;
+}
+
+export async function getAsyncResult(requestId: string): Promise<AsyncResult> {
+  const resp = await fetch(`${BASE_URL}/async/chat/completions/${requestId}`, {
+    method: "GET",
+    headers: headers(),
+  });
+  if (!resp.ok) {
+    const text = await resp.text();
+    throw new Error(`Perplexity Async GET error ${resp.status}: ${text}`);
+  }
+
+  const data = (await resp.json()) as any;
+  const status = data.status ?? "COMPLETED";
+  if (status !== "COMPLETED") {
+    return { status: "IN_PROGRESS", answer: "", citations: [] };
+  }
+
+  const response = data.response;
+  const choice = response?.choices?.[0];
+  return {
+    status: "COMPLETED",
+    answer: choice?.message?.content ?? "",
+    citations: response?.citations ?? [],
+  };
+}
