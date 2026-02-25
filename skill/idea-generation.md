@@ -10,7 +10,8 @@ Generate and evaluate research ideas from identified gaps. This is Stage 3 of th
 ## Prerequisites
 
 - Completed gap analysis with ranked gaps
-- Prompt: `prompt/idea-scoring.md`
+- Prompts: `prompt/idea-scoring.md`, `prompt/validate-idea.md`
+- Tools: web_search, acd_search, pplx_ask (fallback), pplx_deep_research (validation)
 
 ## Process
 
@@ -32,7 +33,18 @@ Idea generation approaches:
 - **Scale**: apply existing method to new scale (bigger/smaller/different domain)
 - **Simplification**: achieve similar results with a simpler approach
 
-### 3. Score Ideas
+### 3. Novelty Pre-Check (per idea, before scoring)
+
+For each generated idea:
+a. `web_search`: search for the idea's core technique/combination — look for existing implementations
+b. `acd_search`: search for papers with similar approach
+c. **If either search finds a close match**: `pplx_ask` — "Does [specific paper/project] already implement [idea description]? What are the differences?"
+d. If prior art confirmed: either discard the idea or reframe it as an extension (adjust novelty score accordingly)
+e. If no prior art found: proceed to scoring
+
+This step prevents the critical failure mode of claiming "first" when prior art exists.
+
+### 4. Score Ideas
 
 Apply `prompt/idea-scoring.md` to each idea:
 - Novelty (1-10)
@@ -43,11 +55,11 @@ Apply `prompt/idea-scoring.md` to each idea:
 
 Be honest and critical. Most ideas should score 4-6 on most dimensions. A 9-10 on any dimension should be rare and well-justified.
 
-### 4. Rank and Recommend
+### 5. Rank and Recommend
 
 Sort by total score. Present Top 3 with detailed recommendation.
 
-### 5. Compile Output
+### 6. Compile Output
 
 ```
 ## Research Ideas: [topic]
@@ -86,3 +98,23 @@ Sort by total score. Present Top 3 with detailed recommendation.
 ## Next Stage
 
 Pass selected idea to **Experiment Design** (skill/experiment-design.md).
+
+## Validation Checkpoint (Mandatory)
+
+After completing scored idea cards + Top 3 recommendations, run stage-end validation:
+
+1. Load `prompt/validate-idea.md`, replace `{{IDEA_OUTPUT}}` with the full idea cards + scores + rationale
+2. Call `pplx_deep_research` with the filled prompt
+3. Parse the JSON response and process issues:
+   - **CRITICAL**: HALT. A "novel" idea already has direct prior art, or a core feasibility assumption is wrong. Report to user.
+   - **WARNING**: Auto-fix — adjust scores, reframe claims, add caveats. Re-check with `pplx_ask` (max 2 rounds).
+   - **INFO**: Log and incorporate.
+4. Only proceed to Stage 4 (Experiment Design) after all CRITICAL issues resolved.
+
+## Tool Priority Reminder
+
+```
+Priority 1 (free):     web_search, acd_search — for novelty pre-check
+Priority 2 (cheap):    pplx_ask — ONLY for ambiguous prior art matches
+Priority 4 (expensive): pplx_deep_research — exactly 1x (mandatory validation)
+```
