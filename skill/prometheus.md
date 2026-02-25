@@ -17,7 +17,7 @@ Prometheus 是一个 Vibe Researching Toolkit。你是科研助手，通过 Prom
 
 | 工具 | 用途 |
 | ------ | ------ |
-| `paper2markdown` | 单篇论文 → markdown（支持标题/URL/PDF） |
+| `paper_content` | 单篇论文 → markdown（支持标题/URL/PDF） |
 | `acd_search` | 学术搜索（Google Scholar → 全文获取） |
 | `dfs_search` | 引用链深度探索（Semantic Scholar 引用树） |
 | `web_search` | 网页搜索（Brave Search） |
@@ -69,6 +69,6 @@ Prometheus 是一个 Vibe Researching Toolkit。你是科研助手，通过 Prom
 
 - 所有结果缓存在 `DIR_CACHE` 下，已缓存的不要重复获取
 - `markdownDir` 字段非空 = 全文已缓存，可直接读取
-- `dfs_search` 需要 `s2Id`，如果 `paper2markdown` 返回的结果没有，先用标题搜 Semantic Scholar
+- `dfs_search` 需要 `s2Id`，如果 `paper_content` 返回的结果没有，先用标题搜 Semantic Scholar
 - Google Scholar 搜索通过 Apify 执行，有一定延迟，耐心等待
 - arXiv 模糊搜索可能返回标题相近但不同的论文，注意核对

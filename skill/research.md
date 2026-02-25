@@ -24,7 +24,7 @@ If unclear, default to **quick** and escalate if results are insufficient.
 
 Goal: Answer a specific question or retrieve a specific paper quickly.
 
-1. If user provides a paper title/URL → `paper2markdown` directly
+1. If user provides a paper title/URL → `paper_content` directly
 2. If user asks a question about a known topic → `acd_search` with focused query, skim results, read the most relevant 1-3
 3. Rate each paper: **high** (directly answers the question), **medium** (provides context), **low** (tangential)
 4. Summarize findings, cite sources with paper titles
@@ -60,7 +60,7 @@ Decision points:
 
 Goal: Trace a paper's reference tree to understand its intellectual context.
 
-1. Start with seed paper → `paper2markdown` to get full text and metadata
+1. Start with seed paper → `paper_content` to get full text and metadata
 2. Read the paper, identify its key contributions and most-cited references
 3. `dfs_search` on the seed paper:
    - Start conservative: `depth=2, breadth=5`

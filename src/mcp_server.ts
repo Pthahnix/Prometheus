@@ -2,7 +2,7 @@ import "dotenv/config";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
-import { paper2markdown } from "./tools/markdown.js";
+import { paperContent } from "./tools/markdown.js";
 import { acdSearch, dfsSearch } from "./tools/academic.js";
 import { webSearch, webContent } from "./tools/web.js";
 
@@ -29,7 +29,7 @@ function makeProgress(server: McpServer, extra: any) {
 // ── Tools ───────────────────────────────────────────────────────────
 
 server.tool(
-  "paper2markdown",
+  "paper_content",
   "Convert a paper to markdown. Accepts a title, arXiv URL, PDF URL, or local PDF path. " +
   "Returns paper metadata with cached markdown path.",
   {
@@ -39,10 +39,10 @@ server.tool(
   },
   async (args, extra: any) => {
     try {
-      const result = await paper2markdown(args, makeProgress(server, extra));
+      const result = await paperContent(args, makeProgress(server, extra));
       return { content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }] };
     } catch (e: any) {
-      return { isError: true, content: [{ type: "text" as const, text: `paper2markdown failed: ${e.message}` }] };
+      return { isError: true, content: [{ type: "text" as const, text: `paper_content failed: ${e.message}` }] };
     }
   },
 );

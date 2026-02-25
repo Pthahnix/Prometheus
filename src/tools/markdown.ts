@@ -101,10 +101,10 @@ export async function title2markdown(
 }
 
 /**
- * paper2markdown — MCP tool entry point.
+ * paper_content — MCP tool entry point.
  * Smart routing: arXiv URL → PDF → title pipeline.
  */
-export async function paper2markdown(
+export async function paperContent(
   input: { title?: string; url?: string; dir?: string },
   onProgress?: ProgressCallback,
 ): Promise<PaperResult> {

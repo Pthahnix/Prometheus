@@ -47,7 +47,7 @@ The `.mcp.json` config is included — Claude Code will auto-discover all tools.
 
 | Tool | Description |
 | ---- | ----------- |
-| `paper2markdown` | Convert a paper to markdown (arXiv URL, PDF, or title → smart routing) |
+| `paper_content` | Convert a paper to markdown (arXiv URL, PDF, or title → smart routing) |
 | `acd_search` | Academic search via Google Scholar → fetch full text → cache |
 | `dfs_search` | Deep reference exploration via DFS (Semantic Scholar references) |
 | `web_search` | Search the web via Brave Search API |
@@ -60,7 +60,7 @@ MCP Client (Claude Code)
     │
     └── mcp_server.ts ─── tool registration
             │
-            ├── tools/markdown.ts  → paper2markdown
+            ├── tools/markdown.ts  → paper_content
             ├── tools/academic.ts  → acd_search, dfs_search
             └── tools/web.ts       → web_search, web_content
                     │

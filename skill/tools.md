@@ -4,7 +4,7 @@ MCP server with 5 tools for academic research and web content retrieval. All too
 
 ## Tools
 
-### paper2markdown
+### paper_content
 
 Convert a single paper to markdown. Smart routing based on input type.
 
