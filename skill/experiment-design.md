@@ -73,3 +73,21 @@ When Pod integration is available:
 3. Execute experiment
 4. `pod_destroy` when done
 5. Analyze results → write paper
+
+## Validation Checkpoint (Mandatory)
+
+After completing the experiment plan, run stage-end validation:
+
+1. Load `prompt/validate-experiment.md`, replace `{{EXPERIMENT_OUTPUT}}` with the full experiment plan
+2. Call `pplx_deep_research` with the filled prompt
+3. Parse the JSON response and process issues:
+   - **CRITICAL**: HALT. Key baseline missing, fundamentally flawed design, or unrealistic resource estimate. Report to user.
+   - **WARNING**: Auto-fix — add missing baselines/metrics, adjust estimates. Re-check with `pplx_ask` (max 2 rounds).
+   - **INFO**: Log and incorporate.
+4. This is the final stage. After validation, deliver the complete research output to the user.
+
+## Tool Priority Reminder
+
+```
+Priority 4 (expensive): pplx_deep_research — exactly 1x (mandatory validation)
+```
