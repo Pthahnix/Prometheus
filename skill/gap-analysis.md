@@ -10,7 +10,8 @@ Identify research gaps from literature survey results. This is Stage 2 of the re
 ## Prerequisites
 
 - Completed literature survey with rated and read papers
-- Prompt: `prompt/gap-discovery.md`
+- Prompts: `prompt/gap-discovery.md`, `prompt/validate-gap.md`
+- Tools: acd_search, web_search, pplx_ask (fallback), pplx_deep_research (validation)
 
 ## Process
 
@@ -26,14 +27,14 @@ Apply `prompt/gap-discovery.md` to the full collection of notes. This produces:
 - Blank identification
 - Trend analysis
 
-### 3. Validate Gaps
+### 3. Validate Gaps (dual-source verification)
 
-For each identified gap, verify:
-- Is this genuinely unexplored, or did we miss a paper? → Quick `acd_search` to check
-- Is this gap because it's hard/impossible, or because nobody tried?
-- Is there a reason this hasn't been done (data unavailable, compute prohibitive)?
-
-Discard gaps that turn out to be already addressed or infeasible.
+For each candidate gap:
+a. `acd_search`: search for papers that may have addressed this gap
+b. `web_search`: search for blog posts, preprints, GitHub repos addressing this gap
+c. **Only if conflicting signals or low confidence**: `pplx_ask` — "Has [gap description] been addressed in recent work in [field]? Cite specific papers."
+d. Discard gaps that are already addressed or clearly infeasible
+e. Adjust ranking based on validation findings
 
 ### 4. Rank Gaps
 
@@ -79,3 +80,23 @@ High-rank gaps are:
 ## Next Stage
 
 Pass the ranked gap list to **Idea Generation** (skill/idea-generation.md).
+
+## Validation Checkpoint (Mandatory)
+
+After completing the ranked gap list, run stage-end validation:
+
+1. Load `prompt/validate-gap.md`, replace `{{GAP_OUTPUT}}` with the full gap list + evidence
+2. Call `pplx_deep_research` with the filled prompt
+3. Parse the JSON response and process issues:
+   - **CRITICAL**: HALT. A gap claimed as open is actually solved, or a critical gap was missed entirely. Report to user.
+   - **WARNING**: Auto-fix — run targeted `acd_search` + `web_search` to verify. Re-check with `pplx_ask` (max 2 rounds).
+   - **INFO**: Log and incorporate.
+4. Only proceed to Stage 3 (Idea Generation) after all CRITICAL issues resolved.
+
+## Tool Priority Reminder
+
+```
+Priority 1 (free):     acd_search, web_search
+Priority 2 (cheap):    pplx_ask — ONLY for ambiguous gaps after Priority 1
+Priority 4 (expensive): pplx_deep_research — exactly 1x (mandatory validation)
+```
