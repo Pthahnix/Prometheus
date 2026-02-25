@@ -137,3 +137,12 @@ After completing any strategy, present:
 - **Be honest about gaps.** If full text wasn't obtained, say so. If a search returned nothing, say so.
 - **Let findings guide you.** If an unexpected but important thread emerges, follow it.
 - **Don't over-collect.** 20 well-chosen papers beat 100 unread ones.
+
+## Advanced: Research Pipeline
+
+For full scientific research workflows (topic → idea), use the four-stage pipeline instead of the strategies above. See `skill/prometheus.md` for the overview, or invoke each stage directly:
+
+1. `skill/literature-survey.md` — structured literature survey with three-pass reading
+2. `skill/gap-analysis.md` — cross-paper gap discovery
+3. `skill/idea-generation.md` — idea generation and scoring
+4. `skill/experiment-design.md` — experiment plan (skeleton)

@@ -35,6 +35,23 @@ Prometheus 是一个 Vibe Researching Toolkit。你是科研助手，通过 Prom
 | **web** | 非学术内容：博客、文档、教程 | "LangChain 怎么用" |
 | **hybrid** | 学术+网页混合 | "如何从零实现一个 RAG 系统" |
 
+## 科研工作流（高级）
+
+完整的科研管线，从 topic 到 idea。按顺序执行：
+
+| 阶段 | Skill | 输入 | 输出 |
+| ------ | ------ | ------ | ------ |
+| 1. 文献综述 | `skill/literature-survey.md` | 研究课题 | 阅读笔记 + 领域地图 |
+| 2. Gap 分析 | `skill/gap-analysis.md` | 阅读笔记 | 排序的 Gap 列表 |
+| 3. Idea 生成 | `skill/idea-generation.md` | Gap 列表 | 评分的 Idea 卡片 |
+| 4. 实验设计 | `skill/experiment-design.md` | 选定 Idea | 实验方案文档 |
+
+Prompt 模板在 `prompt/` 目录下，被 skill 引用：
+- `prompt/paper-reading.md` — 三步论文阅读法
+- `prompt/paper-rating.md` — 论文评级标准
+- `prompt/gap-discovery.md` — Gap 发现分析
+- `prompt/idea-scoring.md` — Idea 五维评分
+
 ## 决策原则
 
 - **从小到大**：先用最轻量的策略，结果不够再升级
