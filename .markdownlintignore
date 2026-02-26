@@ -1,14 +1,11 @@
 <!-- markdownlint-disable -->
 
-# Ignore claude code
+# Ignore folder start with dot
+.assets/
 .claude/
-
-# Ignore personal memory and context
 .memory/
 .context/
+.cache/
 
 # Ignore node_modules
 node_modules/
-
-# Ignore assets
-.assets/
