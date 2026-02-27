@@ -97,69 +97,13 @@ WebResult {
 
 Filenames are normalized: lowercase, non-alphanumeric → `_`, no trailing `_`.
 
-## Perplexity Tools (Paid — Use with Cost Awareness)
+## Tool Usage in Iterative Loop Engine
 
-> **Priority order**: Always exhaust free tools (acd_search, web_search, dfs_search, paper_content) before using Perplexity tools. See Tool Priority Order below.
+All research skills (literature-survey, gap-analysis, idea-generation, experiment-design) use only the 5 free tools above. The iterative loop engine achieves comprehensive research through:
 
-### pplx_search
+- **Parallel searches**: 6 searches per iteration (3 queries × 2 tools)
+- **Iterative refinement**: SEARCH→READ→REFLECT→EVALUATE cycle
+- **Autonomous gap discovery**: System identifies missing information and searches again
+- **Dynamic stopping**: Continues until knowledge is sufficient, not fixed iteration count
 
-Pure search via Perplexity. Returns ranked results. Cheapest Perplexity tool.
-
-| Param | Type | Description |
-| ------- | ------ | ------------- |
-| `query` | string | Search query |
-| `max_results` | number? | Max results (default 5) |
-
-Returns `PplxSearchResult[]` with `title`, `url`, `snippet`, `date`.
-
-**When to use**: Tier 1-2 fallback when web_search/acd_search yield insufficient results.
-
-### pplx_ask
-
-Ask Perplexity a question. Returns grounded answer with citations.
-
-| Param | Type | Description |
-| ------- | ------ | ------------- |
-| `question` | string | The question to ask |
-| `search_mode` | string? | `"web"` (default), `"academic"`, or `"sec"` |
-
-Returns `PplxResult` with `answer` and `citations[]`.
-
-**When to use**: Tier 2 fallback for gap validation, novelty checks, quick fact verification.
-
-### pplx_pro_research
-
-Multi-step Perplexity Pro research with cross-source reasoning.
-
-| Param | Type | Description |
-| ------- | ------ | ------------- |
-| `question` | string | Research question requiring multi-step reasoning |
-| `system_prompt` | string? | Optional system prompt for focus |
-
-Returns `PplxResult` with `answer` and `citations[]`.
-
-**When to use**: Tier 3 tangential exploration. Max 1 call per pipeline.
-
-### pplx_deep_research
-
-Deep research: 20-50 automatic searches with cross-verification. Async.
-
-| Param | Type | Description |
-| ------- | ------ | ------------- |
-| `question` | string | Detailed validation/research request |
-| `timeout_ms` | number? | Timeout in ms (default 10 min) |
-
-Returns `PplxResult` with `answer` and `citations[]`. Takes 1-3 minutes.
-
-**When to use**: ONLY for mandatory stage-end validation (4x per pipeline). Never ad-hoc.
-
-## Tool Priority Order
-
-```
-Priority 1 (free):     acd_search, web_search, dfs_search, paper_content
-Priority 2 (cheap):    pplx_search ($0.005), pplx_ask (~$0.02)
-Priority 3 (moderate): pplx_pro_research (~$0.05) — 1x per pipeline
-Priority 4 (expensive): pplx_deep_research (~$0.40) — 4x mandatory only
-```
-
-MUST exhaust Priority 1 before using Priority 2. Priority 3-4 governed by protocol.
+**No external validation tools needed** — quality control is built into the loop through self-reflection and evaluation.

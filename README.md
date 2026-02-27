@@ -12,14 +12,33 @@ Vibe researching toolkit — AI-powered academic research automation, from liter
 - Convert arXiv papers, PDFs, and web pages to AI-readable markdown
 - Web search via Brave Search API for non-academic sources
 - Full-text caching for offline access and repeated queries
-- Perplexity-powered search, Q&A, and deep research for validation
-- Four-stage research pipeline with mandatory validation at each stage
+- Perplexity-powered search, Q&A, and deep research (optional)
+- Four-stage research pipeline with iterative loop engine
 
 ## How It Works
 
 Most academic AI tools only read abstracts to triage papers. Prometheus downloads the full paper text, converts it to markdown, and lets AI evaluate based on complete methodology, experiments, and discussion.
 
 Three-layer architecture: atomic API wrappers (`utils/`) → pipeline orchestration (`tools/`) → MCP server registration (`mcp_server.ts`).
+
+## Research Pipeline (v0.5.0)
+
+Four-stage iterative loop engine: Topic → Literature Survey → Gap Analysis → Idea Generation → Experiment Design
+
+Each stage uses SEARCH→READ→REFLECT→EVALUATE cycles with autonomous gap discovery and dynamic stopping conditions.
+
+**Key Features**:
+- 6 parallel searches per iteration (3 acd_search + 3 web_search)
+- Three-pass reading protocol (High/Medium/Low rating)
+- State inheritance between stages (knowledge + papersRead)
+- Zero external validation cost (removed Perplexity dependencies)
+- Dynamic stopping: gaps cleared, no progress for 3 rounds, or target reached
+
+**Test Results** (2026-02-27, Large Mesh Model research):
+- Stage 1: 5 iterations, ~70 papers collected
+- Stage 2: 5 research gaps identified with priority ratings
+- Stage 3: 3 scored ideas generated (42/50, 37/50, 37/50)
+- Stage 4: Complete experiment plan with datasets, baselines, metrics
 
 ## Quick Start
 
@@ -35,7 +54,7 @@ TOKEN_MINERU=your-mineru-token
 TOKEN_APIFY=your-apify-token
 TOKEN_BRAVE=your-brave-token
 EMAIL_UNPAYWALL=your-email
-API_KEY_PERPLEXITY=your-perplexity-key
+API_KEY_PERPLEXITY=your-perplexity-key  # optional
 ```
 
 ### MCP Server
@@ -55,10 +74,10 @@ The `.mcp.json` config is included — Claude Code will auto-discover all tools.
 | `dfs_search` | Deep reference exploration via DFS (Semantic Scholar references) |
 | `web_search` | Search the web via Brave Search API |
 | `web_content` | Fetch a web page as markdown and cache it |
-| `pplx_search` | Quick search via Perplexity Search API |
-| `pplx_ask` | Grounded Q&A via Perplexity Sonar (web/academic/sec modes) |
-| `pplx_pro_research` | Multi-step research via sonar-pro |
-| `pplx_deep_research` | Deep research via sonar-deep-research (async, 20-50 searches) |
+| `pplx_search` | Quick search via Perplexity Search API (optional) |
+| `pplx_ask` | Grounded Q&A via Perplexity Sonar (optional) |
+| `pplx_pro_research` | Multi-step research via sonar-pro (optional) |
+| `pplx_deep_research` | Deep research via sonar-deep-research (optional) |
 
 ## Architecture
 
