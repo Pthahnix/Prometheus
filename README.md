@@ -1,6 +1,6 @@
 # Prometheus
 
-Vibe researching toolkit — AI-powered academic research automation, from literature discovery to deep analysis.
+Vibe researching toolkit — AI-powered academic research automation, from literature discovery to experiment execution.
 
 > [!NOTE]
 > This is a work-in-progress personal project, under active development.
@@ -13,7 +13,8 @@ Vibe researching toolkit — AI-powered academic research automation, from liter
 - Web search via Brave Search API for non-academic sources
 - Full-text caching for offline access and repeated queries
 - Perplexity-powered search, Q&A, and deep research (optional)
-- Four-stage research pipeline with iterative loop engine
+- GPU experiment execution via RunPod (pod provisioning, remote training, result retrieval)
+- Five-stage research pipeline: survey → gaps → ideas → design → execution
 
 ## How It Works
 
@@ -21,11 +22,11 @@ Most academic AI tools only read abstracts to triage papers. Prometheus download
 
 Three-layer architecture: atomic API wrappers (`utils/`) → pipeline orchestration (`tools/`) → MCP server registration (`mcp_server.ts`).
 
-## Research Pipeline (v0.5.0)
+## Research Pipeline (v0.6.0)
 
-Four-stage iterative loop engine: Topic → Literature Survey → Gap Analysis → Idea Generation → Experiment Design
+Five-stage iterative pipeline: Topic → Literature Survey → Gap Analysis → Idea Generation → Experiment Design → Experiment Execution
 
-Each stage uses SEARCH→READ→REFLECT→EVALUATE cycles with autonomous gap discovery and dynamic stopping conditions.
+Each stage (1–4) uses SEARCH→READ→REFLECT→EVALUATE cycles with autonomous gap discovery and dynamic stopping conditions. Stage 5 executes the designed experiment on GPU pods.
 
 **Key Features**:
 - 6 parallel searches per iteration (3 acd_search + 3 web_search)
@@ -33,6 +34,7 @@ Each stage uses SEARCH→READ→REFLECT→EVALUATE cycles with autonomous gap di
 - State inheritance between stages (knowledge + papersRead)
 - Zero external validation cost (removed Perplexity dependencies)
 - Dynamic stopping: gaps cleared, no progress for 3 rounds, or target reached
+- GPU experiment execution via RunPod MCP (7-phase SOP: hardware estimation → pod provisioning → environment setup → implementation → training → evaluation → cleanup)
 
 **Test Results** (2026-02-27, Large Mesh Model research):
 - Stage 1: 5 iterations, ~70 papers collected
@@ -55,6 +57,7 @@ TOKEN_APIFY=your-apify-token
 TOKEN_BRAVE=your-brave-token
 EMAIL_UNPAYWALL=your-email
 API_KEY_PERPLEXITY=your-perplexity-key  # optional
+API_KEY_RUNPOD=your-runpod-key          # optional, for experiment execution
 ```
 
 ### MCP Server
@@ -84,23 +87,25 @@ The `.mcp.json` config is included — Claude Code will auto-discover all tools.
 ```
 MCP Client (Claude Code)
     │
-    └── mcp_server.ts ─── tool registration
-            │
-            ├── tools/markdown.ts   → paper_content
-            ├── tools/academic.ts   → acd_search, dfs_search
-            ├── tools/web.ts        → web_search, web_content
-            └── tools/perplexity.ts → pplx_search, pplx_ask,
-                    │                  pplx_pro_research, pplx_deep_research
-                    │
-                    ├── utils/arxiv.ts      → arxiv2md.org, arXiv API
-                    ├── utils/ss.ts         → Semantic Scholar
-                    ├── utils/unpaywall.ts  → Unpaywall
-                    ├── utils/pdf.ts        → MinerU cloud API
-                    ├── utils/apify.ts      → Apify (Google Scholar)
-                    ├── utils/brave.ts      → Brave Search API
-                    ├── utils/web.ts        → Apify rag-web-browser
-                    ├── utils/perplexity.ts → Perplexity API
-                    └── utils/markdown.ts   → local file I/O
+    ├── mcp_server.ts ─── tool registration (Prometheus tools)
+    │       │
+    │       ├── tools/markdown.ts   → paper_content
+    │       ├── tools/academic.ts   → acd_search, dfs_search
+    │       ├── tools/web.ts        → web_search, web_content
+    │       └── tools/perplexity.ts → pplx_search, pplx_ask,
+    │               │                  pplx_pro_research, pplx_deep_research
+    │               │
+    │               ├── utils/arxiv.ts      → arxiv2md.org, arXiv API
+    │               ├── utils/ss.ts         → Semantic Scholar
+    │               ├── utils/unpaywall.ts  → Unpaywall
+    │               ├── utils/pdf.ts        → MinerU cloud API
+    │               ├── utils/apify.ts      → Apify (Google Scholar)
+    │               ├── utils/brave.ts      → Brave Search API
+    │               ├── utils/web.ts        → Apify rag-web-browser
+    │               ├── utils/perplexity.ts → Perplexity API
+    │               └── utils/markdown.ts   → local file I/O
+    │
+    └── @runpod/mcp-server ─── GPU pod lifecycle (create/start/stop/delete)
 ```
 
 ## License
