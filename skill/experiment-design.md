@@ -2,7 +2,7 @@
 
 Design an experiment plan using iterative loop engine. This is Stage 4 of the research pipeline.
 
-> **Status**: Skeleton. Execution capabilities (Pod integration) planned for future phase.
+> **Status**: Active. Outputs feed into Stage 5 (Experiment Execution) via `skill/experiment-execution.md`.
 
 ## Input
 
@@ -301,14 +301,13 @@ After loop terminates and plan finalized, produce:
 - If no standard datasets found → may need to create new benchmark
 - If resource estimates vary widely → investigate why, adjust conservatively
 
-## Next Steps (Future)
+## Next Step
 
-When Pod integration is available:
-1. `pod_create` with estimated GPU requirements
-2. SSH into pod, set up environment
-3. Execute experiment
-4. `pod_destroy` when done
-5. Analyze results → write paper
+After this stage produces an Experiment Plan, the user may proceed to:
+
+**Stage 5: Experiment Execution** → `skill/experiment-execution.md`
+
+This stage takes the Experiment Plan as input and executes it on a RunPod GPU pod. It requires explicit user confirmation (real compute costs involved).
 
 ## Key Differences from Previous Version
 

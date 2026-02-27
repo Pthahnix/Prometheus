@@ -52,6 +52,7 @@ Automatically determine mode from user input:
 | **research** | "research", "find ideas", "gap", "innovation" | "I want to research efficient LLM inference" |
 | **web** | Non-academic content | "How to use LangChain" |
 | **hybrid** | Mixed academic + non-academic | "How to build a RAG system from scratch" |
+| **execute** | "执行实验", "run experiment", "execute", has completed Experiment Plan | "帮我跑这个实验" |
 
 When uncertain, ask the user to confirm. Prefer deeper modes (survey > quick, research > survey).
 
@@ -178,9 +179,28 @@ When the user's intent is "do research", execute this four-stage pipeline. Each 
 3. **Evaluation plan**: Datasets, baselines, metrics, ablation studies
 4. **Resource estimate**: GPU type, training time, storage requirements
 
-> Future: Resource estimates will connect to the Pod system (auto-provision GPU via RunPod)
+> Resource estimates feed into Stage 5 (Experiment Execution) for automatic GPU provisioning via RunPod.
 
 **Output**: Experiment plan document
+
+### Stage 5: Experiment Execution
+
+**Goal**: Execute the experiment on a remote GPU pod and collect results.
+
+**Prerequisite**: Completed Experiment Plan from Stage 4. User must explicitly confirm execution (real money involved).
+
+**Procedure**: See `skill/experiment-execution.md` for the full 7-phase SOP:
+1. Hardware estimation → user confirms budget
+2. Pod provisioning (RunPod MCP)
+3. Environment setup (SSH)
+4. Code implementation (SSH — write code directly on pod)
+5. Experiment run (SSH + tmux)
+6. Result collection (SFTP)
+7. Cleanup (RunPod MCP)
+
+**Output**: Experiment results (metrics, logs, code) saved to `./results/<experiment-name>/`
+
+> This stage uses real compute resources and costs money. It is NEVER auto-triggered — user must explicitly request execution.
 
 ### Validation Loop Protocol
 

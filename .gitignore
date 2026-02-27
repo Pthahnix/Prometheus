@@ -21,6 +21,7 @@ __pycache__/
 # Claude Code
 CLAUDE.md
 .mcp.json
+.claude/
 
 # Project
 TODO.md
