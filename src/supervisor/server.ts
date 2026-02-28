@@ -227,14 +227,14 @@ app.post("/task/:id/feedback", (req: Request, res: Response) => {
   res.json({ status: "resumed", action: feedback.action });
 });
 
-app.get("/task/:id/files/*", (req: Request, res: Response) => {
+app.get("/task/:id/files/*path", (req: Request, res: Response) => {
   if (!currentTask || currentTask.taskId !== req.params.id) {
     res.status(404).json({ error: "Task not found" });
     return;
   }
 
-  // Extract file path from wildcard — everything after /files/
-  const filePath = req.params[0] as string;
+  // Extract file path from named wildcard
+  const filePath = req.params.path as string;
   if (!filePath) {
     res.status(400).json({ error: "File path required" });
     return;
