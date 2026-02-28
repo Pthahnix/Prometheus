@@ -5,7 +5,10 @@
   "main": "index.js",
   "scripts": {
     "mcp": "tsx src/mcp_server.ts",
-    "test": "tsx .test/test-all.ts"
+    "test": "tsx .test/test-all.ts",
+    "build:supervisor": "cd src/supervisor && npm install && npx tsc",
+    "docker:build": "npm run build:supervisor && docker build -t prometheus-pod .",
+    "docker:push": "docker push prometheus-pod:latest"
   },
   "keywords": [],
   "author": "",

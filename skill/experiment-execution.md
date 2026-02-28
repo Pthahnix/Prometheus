@@ -1,6 +1,6 @@
 # Experiment Execution
 
-Execute an experiment on a remote GPU pod. This is Stage 5 of the research pipeline.
+Execute an experiment on a remote GPU pod via Supervisor architecture. This is Stage 5 of the research pipeline.
 
 ## Input
 
@@ -10,13 +10,14 @@ Execute an experiment on a remote GPU pod. This is Stage 5 of the research pipel
 ## Prerequisites
 
 - RunPod MCP available (@runpod/mcp-server configured in .mcp.json)
-- Bash tool available for SSH/SFTP
-- Prompts: `prompt/hardware-estimation.md`, `prompt/environment-setup.md`
+- Bash tool available for curl commands
+- Prompts: `prompt/hardware-estimation.md`, `prompt/experiment-task.md`
 - Environment: `API_KEY_RUNPOD` set in .env
+- Pre-built Docker image: `prometheus-pod:latest` (built via `npm run docker:build`)
 
 ## Overview
 
-Seven-phase sequential pipeline. Code is written directly on the RunPod machine (not uploaded from local). Datasets are downloaded on-pod via HuggingFace. Only results are transferred back to local via SFTP.
+Seven-phase sequential pipeline using Supervisor + Remote Claude Code architecture. Local CC communicates with the pod via HTTP API (curl). Remote CC executes the experiment autonomously, pausing at checkpoints for user review.
 
 **Critical safety rule**: Once a pod is created (Phase 2), ALL subsequent failures MUST still execute Phase 7 (Cleanup) before stopping. Never leave a pod running unattended — it costs money.
 
@@ -24,15 +25,45 @@ Seven-phase sequential pipeline. Code is written directly on the RunPod machine 
 
 Maintain these variables throughout execution:
 
-```typescript
+```
 podId: string               // RunPod pod ID (set in Phase 2)
-sshHost: string             // Public IP for SSH (set in Phase 2)
-sshPort: number             // Mapped SSH port (set in Phase 2)
+podUrl: string              // Pod HTTP endpoint URL (set in Phase 2)
+taskId: string              // Supervisor task ID (set in Phase 3)
 hardware: HardwareEstimate  // GPU config (set in Phase 1)
 experimentName: string      // Derived from Experiment Plan title
-workDir: string             // /workspace/experiment (remote)
 localResultsDir: string     // ./results/<experimentName> (local)
 ```
+
+---
+
+## Phase 0: Task Orchestration
+
+1. Analyze the Experiment Plan to determine checkpoint granularity:
+   - Default checkpoints: `["phase_3", "phase_4", "phase_5", "phase_6"]`
+   - For complex experiments, add sub-checkpoints (e.g., `"phase_4_dryrun"`)
+
+2. Load `prompt/experiment-task.md`
+
+3. Build the task payload by injecting:
+   - `{{EXPERIMENT_PLAN}}` → full experiment plan text
+   - `{{CHECKPOINT_LIST}}` → formatted checkpoint list
+
+4. Prepare the JSON payload for Supervisor:
+
+```json
+{
+  "experimentPlan": "<rendered task prompt>",
+  "checkpoints": ["phase_3", "phase_4", "phase_5", "phase_6"],
+  "envConfig": {},
+  "modelConfig": {
+    "provider": "anthropic",
+    "model": "claude-sonnet-4-20250514",
+    "apiKey": "<from env>"
+  }
+}
+```
+
+5. Save payload to a temporary local file: `/tmp/task_payload.json`
 
 ---
 
@@ -60,228 +91,146 @@ GPU 配置估算:
 
 1. Call RunPod MCP `create-pod`:
    - name: `prometheus-<experimentName>`
-   - imageName: from hardware estimate dockerImage
-   - gpuTypeId: from hardware estimate gpuType (the RunPod gpuTypeId string)
+   - imageName: `prometheus-pod:latest`
+   - gpuTypeIds: from hardware estimate (RunPod gpuTypeId string)
    - gpuCount: from hardware estimate
    - volumeInGb: from hardware estimate diskEstimate_GB
-   - ports: ["22/tcp"]
+   - ports: `["8080/http"]`
    - containerDiskInGb: 20
 
 2. Record `podId` from response
 
-3. Poll RunPod MCP `get-pod` (podId) every 15 seconds:
-   - Max wait: 5 minutes (20 polls)
-   - Look for: runtime status == "RUNNING"
+3. Extract pod URL from response:
+   - RunPod HTTP endpoint format: `https://<podId>-8080.proxy.runpod.net`
+   - Set `podUrl`
+
+4. Poll Supervisor health until ready:
+   ```bash
+   curl -s --max-time 10 ${podUrl}/health
+   ```
+   - Max wait: 5 minutes, poll every 15 seconds
+   - Look for: `{ "status": "ok" }`
    - On timeout: report error, call `delete-pod`, STOP
 
-4. Extract SSH connection from get-pod response:
-   - Find the port mapping for 22/tcp → get public IP and external port
-   - Set `sshHost` and `sshPort`
+---
 
-5. Verify SSH connectivity:
+## Phase 3: Task Dispatch
+
+1. Submit task to Supervisor:
    ```bash
-   ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 root@${sshHost} -p ${sshPort} 'echo "SSH OK"'
+   curl -s -X POST ${podUrl}/task \
+     -H "Content-Type: application/json" \
+     -d @/tmp/task_payload.json
    ```
-   - Retry up to 3 times with 10s wait (pod may need SSH daemon startup time)
-   - On failure: report error, execute Phase 7, STOP
+
+2. Record `taskId` from response
+
+3. Enter the **Checkpoint Loop** (Phase 4)
 
 ---
 
-## Phase 3: Environment Setup
+## Phase 4: Checkpoint Loop
 
-1. Verify GPU:
+This is the core execution loop. Repeat until task completes or is aborted.
+
+### 4.1 Poll Status
+
+```bash
+curl -s ${podUrl}/task/${taskId}/status
+```
+
+Poll every 30 seconds. Handle each status:
+
+- `"running"` → continue polling
+- `"initializing"` → continue polling
+- `"awaiting_approval"` → proceed to 4.2
+- `"completed"` → proceed to Phase 5
+- `"failed"` → fetch report, show error to user, decide retry or abort → Phase 7
+
+### 4.2 Review Checkpoint
+
+1. Fetch the report:
    ```bash
-   ssh root@${sshHost} -p ${sshPort} 'nvidia-smi'
+   curl -s ${podUrl}/task/${taskId}/report
    ```
 
-2. Load `prompt/environment-setup.md`, feed: hardware config, Experiment Plan frameworks/libraries/data sources
+2. Present report to user:
+   - Phase name
+   - Summary
+   - Key metrics (if any)
+   - Files created
+   - Any issues encountered
 
-3. Execute the generated command sequence line-by-line via SSH:
-   ```bash
-   ssh root@${sshHost} -p ${sshPort} '<command>'
-   ```
+3. **USER DECISION GATE**: Ask user for action:
+   - **Continue**: proceed to next phase
+   - **Revise**: provide instructions for what to change
+   - **Abort**: stop experiment → Phase 6
 
-4. If any command fails: diagnose, fix, retry. Max 3 retries per command.
+### 4.3 Send Feedback
 
-5. **Conditional — local dataset upload**:
-   IF user has specified local dataset files:
-   ```bash
-   sftp -P ${sshPort} root@${sshHost} <<EOF
-   mkdir /workspace/experiment/data
-   put -r <local_dataset_path> /workspace/experiment/data/
-   EOF
-   ```
-   ELSE: skip (datasets will be downloaded via HuggingFace in Phase 4)
+```bash
+curl -s -X POST ${podUrl}/task/${taskId}/feedback \
+  -H "Content-Type: application/json" \
+  -d '{"action": "<continue|revise|abort>", "message": "<optional instructions>"}'
+```
 
-6. Create workspace:
-   ```bash
-   ssh root@${sshHost} -p ${sshPort} 'mkdir -p /workspace/experiment'
-   ```
+4. Return to 4.1 (poll status again)
 
 ---
 
-## Phase 4: Code Implementation
+## Phase 5: Result Collection
 
-Claude Code acts as a remote developer. Based on the Experiment Plan, write all experiment code directly on the RunPod machine via SSH.
+When task status is `"completed"`:
 
-### 4.1 Write Model Code
-
-```bash
-ssh root@${sshHost} -p ${sshPort} 'cat > /workspace/experiment/model.py << "PYEOF"
-<model code based on Experiment Plan method section>
-PYEOF'
-```
-
-The model code should implement:
-- Core architecture described in the Experiment Plan
-- Use HuggingFace transformers / torch as appropriate
-- Keep it minimal and focused on the hypothesis being tested
-
-### 4.2 Write Training Script
+### 5.1 Create Local Directory
 
 ```bash
-ssh root@${sshHost} -p ${sshPort} 'cat > /workspace/experiment/train.py << "PYEOF"
-<training script>
-PYEOF'
+mkdir -p ./results/${experimentName}/{logs,metrics,src}
 ```
 
-The training script should include:
-- Dataset loading (HuggingFace datasets or custom)
-- Training loop (or HuggingFace Trainer)
-- Checkpoint saving (best model + periodic)
-- Metrics logging to stdout and to file
-- A `--max-steps` flag for dry-run support
-- Resume from checkpoint support
-
-### 4.3 Write Evaluation Script
+### 5.2 Download Results via Supervisor
 
 ```bash
-ssh root@${sshHost} -p ${sshPort} 'cat > /workspace/experiment/eval.py << "PYEOF"
-<evaluation script>
-PYEOF'
+# Download key files
+curl -s ${podUrl}/task/${taskId}/files/experiment/train.log \
+  -o ./results/${experimentName}/logs/train.log
+
+curl -s ${podUrl}/task/${taskId}/files/experiment/results/ \
+  -o ./results/${experimentName}/metrics/
+
+curl -s ${podUrl}/task/${taskId}/files/experiment/model.py \
+  -o ./results/${experimentName}/src/model.py
+
+curl -s ${podUrl}/task/${taskId}/files/experiment/train.py \
+  -o ./results/${experimentName}/src/train.py
+
+curl -s ${podUrl}/task/${taskId}/files/experiment/eval.py \
+  -o ./results/${experimentName}/src/eval.py
+
+curl -s ${podUrl}/task/${taskId}/files/experiment/config.yaml \
+  -o ./results/${experimentName}/src/config.yaml
 ```
 
-Implements:
-- Load best checkpoint
-- Run on test/validation set
-- Compute all metrics from Experiment Plan
-- Output results as JSON to /workspace/experiment/metrics/results.json
+### 5.3 Checkpoints (optional)
 
-### 4.4 Write Config
-
-```bash
-ssh root@${sshHost} -p ${sshPort} 'cat > /workspace/experiment/config.yaml << "YAMLEOF"
-<hyperparameters and paths>
-YAMLEOF'
-```
-
-### 4.5 Dry-Run Validation
-
-```bash
-ssh root@${sshHost} -p ${sshPort} 'cd /workspace/experiment && python train.py --max-steps 10'
-```
-
-Verify:
-- Dataset loads successfully
-- Model forward pass works
-- Loss computes and backpropagates
-- No OOM errors
-- Checkpoint saving works
-
-If dry-run fails: diagnose the error, fix the code, retry. Max 3 fix-retry cycles.
-If still failing after 3 attempts: report to user, ask whether to continue or abort (→ Phase 7).
+Ask user: "是否下载模型 checkpoints？(可能很大)"
+If yes: download via `/files` endpoint.
 
 ---
 
-## Phase 5: Experiment Run
+## Phase 6: Cleanup
 
-### 5.1 Start Training
-
-```bash
-ssh root@${sshHost} -p ${sshPort} 'cd /workspace/experiment && tmux new-session -d -s train "python train.py 2>&1 | tee train.log"'
-```
-
-### 5.2 Monitor Progress
-
-Periodically check training status:
-```bash
-ssh root@${sshHost} -p ${sshPort} 'tail -30 /workspace/experiment/train.log'
-```
-
-Check for:
-- Loss is decreasing (training is progressing)
-- No NaN or Inf values
-- GPU utilization is reasonable (via `nvidia-smi`)
-- Training is still running (`tmux has-session -t train`)
-
-Monitoring interval: check every few minutes for short jobs, less frequently for long jobs.
-
-### 5.3 Failure Handling
-
-- **OOM**: Reduce batch_size in config, restart training
-- **NaN loss**: Lower learning_rate, restart from last checkpoint
-- **Process crash**: Check error in train.log, fix code if needed, resume from checkpoint
-- **Stuck (no progress for 30+ minutes)**: Investigate GPU utilization, kill and restart
-
-Max recovery attempts: 3. If unrecoverable: save whatever results exist, proceed to Phase 6.
-
-### 5.4 Training Complete
-
-When training finishes:
-```bash
-ssh root@${sshHost} -p ${sshPort} 'cd /workspace/experiment && python eval.py'
-```
-
-Report final metrics to user.
-
----
-
-## Phase 6: Result Collection
-
-### 6.1 Create Local Directory
-
-```bash
-mkdir -p ./results/${experimentName}/{logs,metrics,checkpoints,src}
-```
-
-### 6.2 Download via SFTP
-
-```bash
-sftp -P ${sshPort} root@${sshHost} << EOF
-get /workspace/experiment/train.log ./results/${experimentName}/logs/
-get -r /workspace/experiment/metrics/ ./results/${experimentName}/metrics/
-get /workspace/experiment/model.py ./results/${experimentName}/src/
-get /workspace/experiment/train.py ./results/${experimentName}/src/
-get /workspace/experiment/eval.py ./results/${experimentName}/src/
-get /workspace/experiment/config.yaml ./results/${experimentName}/src/
-EOF
-```
-
-### 6.3 Checkpoints (optional)
-
-Ask user: "是否下载模型 checkpoints？(可能很大: ~{size}GB)"
-If yes:
-```bash
-sftp -P ${sshPort} root@${sshHost} << EOF
-get -r /workspace/experiment/checkpoints/ ./results/${experimentName}/checkpoints/
-EOF
-```
-
----
-
-## Phase 7: Cleanup
-
-### 7.1 Stop Pod
+### 6.1 Stop Pod
 
 Call RunPod MCP `stop-pod` with podId.
 
-### 7.2 Delete Pod
+### 6.2 Delete Pod
 
 Ask user: "Pod 已停止。是否删除？（删除后数据不可恢复）"
 If confirmed: call RunPod MCP `delete-pod` with podId.
 If declined: inform user the pod is stopped but still incurring storage costs.
 
-### 7.3 Experiment Summary
+### 6.3 Experiment Summary
 
 Output a final summary:
 
@@ -289,7 +238,7 @@ Output a final summary:
 ## 实验完成: <experimentName>
 
 ### 结果
-- 关键指标: <metrics from eval.py>
+- 关键指标: <metrics from final report>
 
 ### 资源消耗
 - 总运行时间: <hours>
@@ -314,13 +263,11 @@ Output a final summary:
 | Phase | Error | Action |
 |-------|-------|--------|
 | 2 | Pod creation fails | Report to user, STOP |
-| 2 | Pod timeout (not RUNNING in 5min) | Delete pod, STOP |
-| 2 | SSH connection fails | Retry 3×, then delete pod, STOP |
-| 3 | Dependency install fails | Diagnose, fix, retry 3× |
-| 4 | Dry-run fails | Fix code, retry 3×, ask user |
-| 5 | OOM | Reduce batch size, restart |
-| 5 | NaN loss | Lower LR, restart from checkpoint |
-| 5 | Process crash | Fix code, resume from checkpoint |
-| Any | Unrecoverable error | Save partial results → Phase 6 → Phase 7 |
+| 2 | Supervisor health timeout | Delete pod, STOP |
+| 3 | Task submission fails | Retry 3×, then abort → Phase 6 |
+| 4 | Remote CC fails (status: failed) | Show error report, ask user: retry or abort |
+| 4 | Poll timeout (no response 10min) | Check pod status via RunPod MCP, decide |
+| 5 | File download fails | Retry 3×, warn user about missing files |
+| Any | Unrecoverable error | Save partial results → Phase 5 → Phase 6 |
 
-**Golden rule**: Phase 7 ALWAYS runs if Phase 2 succeeded. No exceptions.
+**Golden rule**: Phase 6 ALWAYS runs if Phase 2 succeeded. No exceptions.
