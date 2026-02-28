@@ -13,7 +13,7 @@ Vibe researching toolkit — AI-powered academic research automation, from liter
 - Web search via Brave Search API for non-academic sources
 - Full-text caching for offline access and repeated queries
 - Perplexity-powered search, Q&A, and deep research (optional)
-- GPU experiment execution via RunPod (pod provisioning, remote training, result retrieval)
+- GPU experiment execution via RunPod with Supervisor HTTP service (pod provisioning, remote training, result retrieval)
 - Five-stage research pipeline: survey → gaps → ideas → design → execution
 
 ## How It Works
@@ -22,11 +22,11 @@ Most academic AI tools only read abstracts to triage papers. Prometheus download
 
 Three-layer architecture: atomic API wrappers (`utils/`) → pipeline orchestration (`tools/`) → MCP server registration (`mcp_server.ts`).
 
-## Research Pipeline (v0.6.0)
+## Research Pipeline (v0.7.0)
 
 Five-stage iterative pipeline: Topic → Literature Survey → Gap Analysis → Idea Generation → Experiment Design → Experiment Execution
 
-Each stage (1–4) uses SEARCH→READ→REFLECT→EVALUATE cycles with autonomous gap discovery and dynamic stopping conditions. Stage 5 executes the designed experiment on GPU pods.
+Each stage (1–4) uses SEARCH→READ→REFLECT→EVALUATE cycles with autonomous gap discovery and dynamic stopping conditions. Stage 5 dispatches the experiment to a GPU pod via the Supervisor HTTP service.
 
 **Key Features**:
 - 6 parallel searches per iteration (3 acd_search + 3 web_search)
@@ -34,7 +34,8 @@ Each stage (1–4) uses SEARCH→READ→REFLECT→EVALUATE cycles with autonomou
 - State inheritance between stages (knowledge + papersRead)
 - Zero external validation cost (removed Perplexity dependencies)
 - Dynamic stopping: gaps cleared, no progress for 3 rounds, or target reached
-- GPU experiment execution via RunPod MCP (7-phase SOP: hardware estimation → pod provisioning → environment setup → implementation → training → evaluation → cleanup)
+- Supervisor-mediated experiment execution: local CC → HTTP API → remote CC on RunPod pod
+- Checkpoint-based phase control with continue/revise/abort feedback
 
 **Test Results** (2026-02-27, Large Mesh Model research):
 - Stage 1: 5 iterations, ~70 papers collected
@@ -85,7 +86,7 @@ The `.mcp.json` config is included — Claude Code will auto-discover all tools.
 ## Architecture
 
 ```
-MCP Client (Claude Code)
+MCP Client (Claude Code — local)
     │
     ├── mcp_server.ts ─── tool registration (Prometheus tools)
     │       │
@@ -105,7 +106,15 @@ MCP Client (Claude Code)
     │               ├── utils/perplexity.ts → Perplexity API
     │               └── utils/markdown.ts   → local file I/O
     │
-    └── @runpod/mcp-server ─── GPU pod lifecycle (create/start/stop/delete)
+    ├── @runpod/mcp-server ─── GPU pod lifecycle (create/start/stop/delete)
+    │
+    └── Supervisor (src/supervisor/) ─── HTTP service on RunPod pod
+            │
+            ├── POST /task ──→ write task file → spawn remote CC
+            ├── GET  /task/:id/status ──→ poll execution state
+            ├── GET  /task/:id/report ──→ fetch checkpoint reports
+            ├── POST /task/:id/feedback ──→ continue/revise/abort
+            └── GET  /task/:id/files/*path ──→ download results
 ```
 
 ## License
