@@ -29,6 +29,7 @@ Five-stage iterative pipeline: Topic → Literature Survey → Gap Analysis → 
 Each stage (1–4) uses SEARCH→READ→REFLECT→EVALUATE cycles with autonomous gap discovery and dynamic stopping conditions. Stage 5 dispatches the experiment to a GPU pod via the Supervisor HTTP service.
 
 **Key Features**:
+
 - 6 parallel searches per iteration (3 acd_search + 3 web_search)
 - Three-pass reading protocol (High/Medium/Low rating)
 - State inheritance between stages (knowledge + papersRead)
@@ -36,12 +37,6 @@ Each stage (1–4) uses SEARCH→READ→REFLECT→EVALUATE cycles with autonomou
 - Dynamic stopping: gaps cleared, no progress for 3 rounds, or target reached
 - Supervisor-mediated experiment execution: local CC → HTTP API → remote CC on RunPod pod
 - Checkpoint-based phase control with continue/revise/abort feedback
-
-**Test Results** (2026-02-27, Large Mesh Model research):
-- Stage 1: 5 iterations, ~70 papers collected
-- Stage 2: 5 research gaps identified with priority ratings
-- Stage 3: 3 scored ideas generated (42/50, 37/50, 37/50)
-- Stage 4: Complete experiment plan with datasets, baselines, metrics
 
 ## Quick Start
 
